@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Group Contribution Tracker</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0f172a">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { background-color: #0f172a; color: white; display: flex; justify-content: center; height: 100vh; margin: 0; font-family: sans-serif;}
+    #app-container { width: 100%; max-width: 450px; background-color: #1e293b; height: 100%; display: flex; flex-direction: column; position: relative; overflow: hidden; box-shadow: 0 0 20px rgba(0,0,0,0.5);}
+    .scrollable-content { flex-grow: 1; overflow-y: auto; padding-bottom: 80px; }
+    .scrollable-content::-webkit-scrollbar { display: none; }
+    .tab-content { display: none; padding: 16px; }
+    .tab-content.active { display: block; }
+    .nav-btn.active { color: #60a5fa; }
+    .nav-btn { color: #94a3b8; transition: color 0.2s; }
+    
+    /* AI Chat Bubbles */
+    .chat-bubble { max-width: 85%; padding: 10px 14px; border-radius: 16px; margin-bottom: 12px; font-size: 14px; line-height: 1.4; }
+    .chat-user { background-color: #2563eb; color: white; border-bottom-right-radius: 4px; margin-left: auto; }
+    .chat-ai { background-color: #334155; color: #e2e8f0; border-bottom-left-radius: 4px; margin-right: auto; }
+  </style>
+</head>
+<body>
+
+<div id="app-container">
+  
+  <div class="bg-slate-900 p-4 border-b border-slate-700 flex justify-between items-center z-10">
+    <div>
+      <h1 class="font-bold text-lg leading-tight text-white">Group Contribution Tracker</h1>
+      <p id="sync-status" class="text-xs text-yellow-400 mt-1"><i class="fa-solid fa-spinner fa-spin"></i> Booting up...</p>
+    </div>
+  </div>
+
+  <div class="scrollable-content flex flex-col h-full">
+
+    <div id="tab-members" class="tab-content active">
+      <div class="bg-slate-800 rounded-xl p-4 mb-4 border border-slate-700">
+        <h2 class="text-sm font-bold text-slate-300 mb-3">Add Member</h2>
+        <div class="flex flex-col gap-2">
+          <input type="text" id="new-member-name" placeholder="Full name" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+          <div class="flex gap-2">
+            <input type="email" id="new-member-email" placeholder="Email (optional)" class="flex-grow bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+            <button id="btn-add-member" onclick="addMember()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition">Add</button>
+          </div>
+        </div>
+      </div>
+      <h2 class="text-sm font-bold text-slate-300 mb-3 ml-1">Member List</h2>
+      <div id="members-list-ui" class="space-y-2"></div> 
+    </div>
+
+    <div id="edit-modal" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center px-4">
+      <div class="bg-slate-800 rounded-xl p-5 border border-slate-700 w-full max-w-sm shadow-2xl">
+        <h2 class="text-lg font-bold text-white mb-4">Edit Profile</h2>
+        <input type="hidden" id="edit-old-name">
+        <label class="block text-xs font-bold text-slate-400 mb-1">Full Name</label>
+        <input type="text" id="edit-new-name" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white mb-3 focus:outline-none focus:border-blue-500">
+        <label class="block text-xs font-bold text-slate-400 mb-1">Email Address</label>
+        <input type="email" id="edit-new-email" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white mb-5 focus:outline-none focus:border-blue-500">
+        <div class="flex gap-3">
+          <button onclick="closeEditModal()" class="w-1/2 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded-lg text-sm transition">Cancel</button>
+          <button onclick="saveEditMember()" id="btn-save-edit" class="w-1/2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-lg text-sm transition">Update</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-contribution" class="tab-content">
+      <div class="mb-4 flex items-center justify-between">
+        <select id="pay-member-select" onchange="renderPayTab()" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-lg font-bold text-white focus:outline-none focus:border-blue-500"></select>
+        <span class="text-xs text-slate-400 bg-slate-800 px-2 py-1 rounded border border-slate-700">Next due: <span id="pay-next-due" class="text-white font-bold">...</span></span>
+      </div>
+      <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 mb-4">
+        <label class="block text-xs font-bold text-slate-400 mb-2">Amount (CZK)</label>
+        <select id="pay-amount" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-3 text-sm text-white mb-4 focus:outline-none focus:border-blue-500">
+          <option value="100">100 CZK (1 month)</option><option value="200">200 CZK (2 months)</option><option value="300">300 CZK (3 months)</option><option value="400">400 CZK (4 months)</option><option value="500">500 CZK (5 months)</option><option value="600">600 CZK (6 months)</option><option value="1200">1,200 CZK (1 Year)</option>
+        </select>
+        <button id="btn-save-payment" onclick="savePayment()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg text-sm transition mb-3">Save Payment</button>
+        <div id="pay-warning-container"></div>
+      </div>
+      <h3 class="text-sm font-bold text-slate-300 mb-3 ml-1">Payment History</h3>
+      <div id="pay-history-list" class="space-y-2"></div>
+    </div>
+
+<div id="tab-give" class="tab-content">
+      <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 mb-4">
+        <h2 class="text-sm font-bold text-slate-300 mb-3">Generosity Giving</h2>
+        <div class="flex gap-2 mb-3">
+          <input type="number" id="new-give-amount" placeholder="CZK" class="w-1/3 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+          <input type="text" id="new-give-name" placeholder="Giver name" class="w-2/3 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+        </div>
+        <button id="btn-save-give" onclick="saveGive()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg text-sm transition"><i class="fa-solid fa-hand-holding-heart mr-2"></i>Give</button>
+      </div>
+      <h3 class="text-sm font-bold text-slate-300 mb-3 ml-1">Give History</h3>
+      <div id="give-history-list" class="space-y-2"></div>
+    </div>
+
+    <div id="tab-reports" class="tab-content">
+      <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 mb-4">
+        <h2 class="text-sm font-bold text-slate-300 mb-3">Lifetime Contributions</h2>
+        <div class="flex justify-between border-b border-slate-700 pb-2 mb-2 text-xs font-bold text-slate-400">
+          <span>Member</span><span>Total CZK</span>
+        </div>
+        <div id="reports-lifetime-list"></div>
+      </div>
+      <h2 class="text-sm font-bold text-slate-300 mb-3 ml-1">Monthly Breakdown</h2>
+      <div id="reports-monthly-list" class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden"></div>
+      <h2 class="text-sm font-bold text-slate-300 mb-3 ml-1 mt-5">Giving</h2>
+      <div id="reports-giving-list" class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden"></div>
+
+
+    <div id="tab-balance" class="tab-content">
+      <div class="grid grid-cols-3 gap-2 mb-4">
+        <div class="bg-slate-800 rounded-xl p-3 border border-slate-700 text-center"><p class="text-xs text-slate-400 mb-1">Collected</p><p id="bal-collected" class="text-base font-bold text-green-400">0 CZK</p></div>
+        <div class="bg-slate-800 rounded-xl p-3 border border-slate-700 text-center"><p class="text-xs text-slate-400 mb-1">Given</p><p id="bal-given" class="text-base font-bold text-blue-400">0 CZK</p></div>
+        <div class="bg-slate-800 rounded-xl p-3 border border-slate-700 text-center"><p class="text-xs text-slate-400 mb-1">Spent</p><p id="bal-spent" class="text-base font-bold text-red-400">0 CZK</p></div>
+        <div class="col-span-3 bg-blue-900/30 rounded-xl p-4 border border-blue-800 text-center shadow-[0_0_15px_rgba(59,130,246,0.2)]"><p class="text-sm text-blue-300 font-bold mb-1">Current Balance</p><p id="bal-current" class="text-3xl font-black text-white">0 CZK</p></div>
+      </div>
+      <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 mb-5">
+        <h2 class="text-sm font-bold text-slate-300 mb-3">Log Expense</h2>
+        <div class="flex gap-2 mb-3">
+          <input type="number" id="new-exp-amount" placeholder="CZK" class="w-1/3 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+          <input type="text" id="new-exp-reason" placeholder="Reason" class="w-2/3 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+        </div>
+        <button id="btn-save-expense" onclick="saveExpense()" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded-lg text-sm border border-slate-600 transition">Save Expense</button>
+      </div>
+      <h3 class="text-sm font-bold text-slate-300 mb-3 ml-1">Spending History</h3>
+      <div id="expense-history-list" class="space-y-2"></div>
+    </div>
+
+    <div id="tab-ai" class="tab-content" style="display: none; height: calc(100vh - 140px); flex-direction: column;">
+      <div id="chat-history" class="flex-grow overflow-y-auto mb-4 pr-2 flex flex-col">
+        <div class="chat-bubble chat-ai">
+          👋 Hi! I am your Fellow Accountant. Ask me anything about the team's balances, missing payments, or expenses!
+        </div>
+      </div>
+      <!-- REPLACE THIS WHOLE DIV IN TAB-AI -->
+<div class="flex gap-2 mt-auto">
+  <select id="voice-lang" class="bg-slate-800 border border-slate-700 text-slate-300 text-xs font-bold rounded-lg px-2">
+    <option value="en-US">EN</option>
+    <option value="am-ET">አማ</option>
+  </select>
+  <button id="btn-voice" onclick="startVoice()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-4 rounded-lg"><i class="fa-solid fa-microphone"></i></button>
+  <input type="text" id="ai-input" onkeydown="if(event.key==='Enter'){sendToAI()}" placeholder="e.g. Who owes the most money?" class="flex-grow bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500">
+  <button id="btn-send-ai" onclick="sendToAI()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-5 rounded-lg"><i class="fa-solid fa-paper-plane"></i></button>
+</div>
+    </div>
+
+  </div>
+
+  <button onclick="switchTab('ai')" class="absolute bottom-24 right-5 bg-blue-600 hover:bg-blue-500 text-white w-14 h-14 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.5)] flex items-center justify-center transition-transform hover:scale-110 z-50 border-2 border-slate-800">
+    <i class="fa-solid fa-wand-magic-sparkles text-xl"></i>
+  </button>
+
+ <div class="bg-slate-900 border-t border-slate-700 flex justify-between items-center p-2 pb-4 absolute bottom-0 w-full z-10">
+    <button onclick="switchTab('members')" id="nav-members" class="nav-btn active flex flex-col items-center p-2 w-1/5"><i class="fa-solid fa-user-group mb-1 text-lg"></i><span class="text-[10px] font-bold uppercase tracking-wider">Members</span></button>
+    <button onclick="switchTab('contribution')" id="nav-contribution" class="nav-btn flex flex-col items-center p-2 w-1/5"><i class="fa-solid fa-hand-holding-dollar mb-1 text-lg"></i><span class="text-[10px] font-bold uppercase tracking-wider">Pay</span></button>
+    <button onclick="openGiveTab()" id="nav-give" class="nav-btn flex flex-col items-center p-2 w-1/5"><i class="fa-solid fa-hand-holding-heart mb-1 text-lg"></i><span class="text-[10px] font-bold uppercase tracking-wider">Give</span></button>
+    <button onclick="switchTab('reports')" id="nav-reports" class="nav-btn flex flex-col items-center p-2 w-1/5"><i class="fa-solid fa-chart-simple mb-1 text-lg"></i><span class="text-[10px] font-bold uppercase tracking-wider">Reports</span></button>
+    <button onclick="switchTab('balance')" id="nav-balance" class="nav-btn flex flex-col items-center p-2 w-1/5"><i class="fa-solid fa-wallet mb-1 text-lg"></i><span class="text-[10px] font-bold uppercase tracking-wider text-center">Bal & Exp</span></button>
+  </div>
+
+<script>
+  // ==========================================
+  // 🔴 PASTE YOUR EXACT WEB APP URL RIGHT HERE
+  // ==========================================
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxJOYP7aTEl3v1RUottSteG-lduC1wuhk-7qedudRkamNtfywvyCkScknSP3zKWGBHv/exec"; 
+
+  const CURRENT_MONTH_STR = "2026-07"; 
+  // --- GIVE TAB SOFT LOCK ---
+  const ADMIN_PIN = "698846"; // 🔴 change this to your own secret PIN
+  let giveUnlocked = false; // starts locked on every page load
+  let appData = { members: [], payments: [], expenses: [], gives: [] };
+
+  function setStatus(msg, isError = false, isLoading = false) {
+    const el = document.getElementById('sync-status');
+    if(isLoading) el.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-blue-400"></i> ${msg}`;
+    else if(isError) el.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-red-400"></i> ${msg}`;
+    else el.innerHTML = `<i class="fa-solid fa-check text-green-400"></i> ${msg}`;
+  }
+
+  function apiCall(action, params = {}) {
+    setStatus("Syncing...", false, true);
+    return new Promise((resolve) => {
+      const cbName = 'jsonp_' + Date.now() + '_' + Math.round(Math.random() * 1e6);
+      const script = document.createElement('script');
+
+      let done = false;
+      const cleanup = () => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        delete window[cbName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+      };
+
+      window[cbName] = (data) => {
+        cleanup();
+        setStatus("Synced with Google Sheet");
+        resolve(data);
+      };
+
+      script.onerror = () => {
+        cleanup();
+        setStatus("Network error — try again", true);
+        resolve({ ok: false, error: "Network error (script failed to load)" });
+      };
+
+      const timer = setTimeout(() => {
+        cleanup();
+        setStatus("Timed out — try again", true);
+        resolve({ ok: false, error: "Request timed out" });
+      }, 40000);
+
+      let url = `${SCRIPT_URL}?action=${encodeURIComponent(action)}&callback=${cbName}`;
+      for (const key in params) url += `&${key}=${encodeURIComponent(params[key])}`;
+      script.src = url;
+      document.body.appendChild(script);
+    });
+  }
+
+  async function loadAllData() {
+    if(SCRIPT_URL === "YOUR_URL_HERE") return setStatus("ERROR: Paste URL in Code", true);
+    const res = await apiCall('getAll');
+    if (res.ok) {
+      appData = { members: (res.members || []).filter(m => String(m.FullName || "").trim() !== ""), payments: res.payments || [], expenses: res.expenses || [], gives: res.gives || [] };
+      renderAll();
+      if (res.version) setStatus("Synced • Backend " + res.version);
+      else setStatus("Synced with Google Sheet");
+    }
+  }
+
+ function renderAll() {
+    renderMembersTab();
+    renderPayTab();
+    renderGiveTab();
+    renderReportsTab();
+    renderGivingReport();
+    renderBalanceTab();
+  }
+
+  function cleanMonthString(val) {
+    let s = String(val || "").trim();
+    if(s.includes('T')) {
+      let d = new Date(s);
+      let y = d.getFullYear();
+      let m = String(d.getMonth() + 1).padStart(2, '0');
+      return `${y}-${m}`;
+    }
+    return s;
+  }
+
+  function formatMonthText(yyyyMM) {
+    let safeStr = cleanMonthString(yyyyMM);
+    if(!safeStr || !safeStr.includes('-')) return safeStr || "Unknown";
+    const [y, m] = safeStr.split('-');
+    const d = new Date(parseInt(y), parseInt(m)-1);
+    return d.toLocaleString('default', { month: 'long', year: 'numeric' });
+  }
+
+  // --- TAB 1: MEMBERS LOGIC ---
+  function getMemberStatus(name) {
+    const myPayments = appData.payments.filter(p => String(p.MemberName).toLowerCase() === String(name).toLowerCase());
+
+    let maxDate;
+    if (myPayments.length === 0) {
+      maxDate = new Date(2026, 5, 1); 
+    } else {
+      let validMonths = myPayments.map(p => cleanMonthString(p.AppliedMonth)).filter(m => m !== "");
+      if(validMonths.length === 0) return { text: "Data error", style: "text-slate-400 bg-slate-700/50", monthsBehind: 0 };
+      const maxMonth = validMonths.sort().reverse()[0];
+      const parts = maxMonth.split('-');
+      maxDate = new Date(parseInt(parts[0]), parseInt(parts[1])-1, 1);
+    }
+
+    const curDate = new Date(CURRENT_MONTH_STR + "-01");
+    const diffMonths = (maxDate.getFullYear() - curDate.getFullYear()) * 12 + (maxDate.getMonth() - curDate.getMonth());
+
+    if (diffMonths === 0) return { text: "No overdue", style: "text-green-400 bg-green-900/30", monthsBehind: 0 };
+    if (diffMonths < 0) return { text: `${Math.abs(diffMonths)} month overdue`, style: "text-red-400 bg-red-900/30", monthsBehind: Math.abs(diffMonths) };
+    return { text: `${diffMonths} month advance payment`, style: "text-blue-400 bg-blue-900/30", monthsBehind: 0 };
+  }
+
+  function renderMembersTab() {
+    const listUI = document.getElementById('members-list-ui');
+    listUI.innerHTML = "";
+    appData.members.forEach(m => {
+      const name = m.FullName;
+      const email = m.Email || "";
+      const status = getMemberStatus(name);
+      listUI.innerHTML += `
+        <div class="bg-slate-800 rounded-xl p-3 border border-slate-700 flex justify-between items-center hover:border-slate-500">
+          <div onclick="jumpToPay('${name.replace(/'/g, "\\'")}')" class="cursor-pointer flex-grow">
+            <h3 class="font-bold text-white">${name}</h3>
+            <span class="text-xs px-2 py-0.5 rounded-full mt-1 inline-block ${status.style}">${status.text}</span>
+          </div>
+          <button onclick="openEditModal('${name.replace(/'/g, "\\'")}', '${email.replace(/'/g, "\\'")}')" class="text-xs text-slate-400 hover:text-white bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-600">Edit profile</button>
+        </div>`;
+    });
+  }
+
+  async function addMember() {
+    const name = document.getElementById('new-member-name').value;
+    const email = document.getElementById('new-member-email').value;
+    if(!name.trim()) return alert("Enter a name!");
+    const btn = document.getElementById('btn-add-member');
+    btn.innerText = "Saving..."; btn.disabled = true;
+    await apiCall('addMember', { fullName: name, email: email });
+    document.getElementById('new-member-name').value = "";
+    document.getElementById('new-member-email').value = "";
+    btn.innerText = "Add"; btn.disabled = false;
+    loadAllData();
+  }
+
+  function openEditModal(oldName, email) {
+    document.getElementById('edit-old-name').value = oldName;
+    document.getElementById('edit-new-name').value = oldName;
+    document.getElementById('edit-new-email').value = email === "undefined" ? "" : email;
+    document.getElementById('edit-modal').classList.remove('hidden');
+  }
+
+  function closeEditModal() { document.getElementById('edit-modal').classList.add('hidden'); }
+
+  async function saveEditMember() {
+    const oldName = document.getElementById('edit-old-name').value;
+    const newName = document.getElementById('edit-new-name').value;
+    const newEmail = document.getElementById('edit-new-email').value;
+    if(!newName.trim()) return alert("Name cannot be blank");
+    const btn = document.getElementById('btn-save-edit');
+    btn.innerText = "Saving..."; btn.disabled = true;
+    await apiCall('editMember', { oldName: oldName, newName: newName, newEmail: newEmail });
+    closeEditModal();
+    btn.innerText = "Update"; btn.disabled = false;
+    loadAllData();
+  }
+
+  // --- TAB 2: CONTRIBUTION LOGIC ---
+  function jumpToPay(name) {
+    switchTab('contribution');
+    const sel = document.getElementById('pay-member-select');
+    sel.innerHTML = "";
+    appData.members.forEach(m => sel.innerHTML += `<option value="${m.FullName}">${m.FullName}</option>`);
+    sel.value = name;
+    renderPayTab();
+  }
+
+  function renderPayTab() {
+    const sel = document.getElementById('pay-member-select');
+
+    if (sel.options.length === 0 || sel.options.length !== appData.members.length) {
+      const cur = sel.value;
+      sel.innerHTML = "";
+      appData.members.forEach(m => sel.innerHTML += `<option value="${m.FullName}">${m.FullName}</option>`);
+      if(cur && appData.members.some(m=>m.FullName===cur)) sel.value = cur;
+      else if(appData.members.length>0) sel.value = appData.members[0].FullName;
+    }
+
+    const active = sel.value;
+    if(!active) return;
+
+    const myP = appData.payments.filter(p=>String(p.MemberName).toLowerCase()===String(active).toLowerCase());
+
+    let nDue = CURRENT_MONTH_STR;
+    if(myP.length>0){
+      let validMonths = myP.map(p => cleanMonthString(p.AppliedMonth)).filter(m => m !== "");
+      if(validMonths.length > 0) {
+        let maxM = validMonths.sort().reverse()[0];
+        let parts = maxM.split('-');
+        if(parts.length >= 2) {
+            let y = parseInt(parts[0]); let m = parseInt(parts[1]) + 1;
+            if(m>12){m=1;y+=1;}
+            nDue=`${y}-${String(m).padStart(2,'0')}`;
+        }
+      }
+    }
+    document.getElementById('pay-next-due').innerText = formatMonthText(nDue);
+
+    const stat = getMemberStatus(active);
+    const wCont = document.getElementById('pay-warning-container');
+    if(stat.monthsBehind>=3) {
+      wCont.innerHTML = `<div class="bg-red-900/40 border border-red-800 rounded-lg p-3 flex items-start gap-3 mt-3"><i class="fa-solid fa-triangle-exclamation text-red-400 mt-0.5"></i><div><p class="text-sm font-bold text-red-400 leading-tight">⚠️ ${stat.monthsBehind} month unpaid bill</p></div></div>`;
+    } else wCont.innerHTML = "";
+
+    const hList = document.getElementById('pay-history-list');
+    hList.innerHTML = "";
+
+    if (myP.length === 0) {
+      hList.innerHTML = `<p class="text-sm text-slate-500 italic py-2 text-center">No payment history yet.</p>`;
+    } else {
+      const sortedP = [...myP].sort((a,b) => cleanMonthString(b.AppliedMonth).localeCompare(cleanMonthString(a.AppliedMonth)));
+      sortedP.forEach(p=>{
+        let pMonth = cleanMonthString(p.AppliedMonth);
+        hList.innerHTML+=`<div class="bg-slate-800 rounded-lg p-3 border border-slate-700 flex justify-between items-center"><div><p class="font-bold text-sm text-white">${formatMonthText(pMonth)}</p><p class="text-xs text-slate-400">${p.Amount} CZK</p></div><button onclick="deletePayment('${p.MemberName}', '${pMonth}')" class="text-red-400 hover:text-red-300 p-2"><i class="fa-solid fa-trash-can"></i></button></div>`;
+      });
+    }
+  }
+
+  async function savePayment() {
+    const n = document.getElementById('pay-member-select').value;
+    const a = document.getElementById('pay-amount').value;
+    if(!n) return;
+    const btn = document.getElementById('btn-save-payment');
+    btn.innerText = "Saving..."; btn.disabled = true;
+    const res = await apiCall('addPayment', { memberName: n, amount: a });
+    btn.innerText = "Save Payment"; btn.disabled = false;
+    if (res && !res.ok) { alert("Backend Error: " + res.error); return; }
+    loadAllData();
+  }
+
+  // --- TAB 3: REPORTS LOGIC ---
+  function renderReportsTab() {
+    const lMap = {}; appData.payments.forEach(p=>lMap[p.MemberName]=(lMap[p.MemberName]||0)+Number(p.Amount));
+    const ltList = document.getElementById('reports-lifetime-list'); ltList.innerHTML="";
+    Object.keys(lMap).sort().forEach(n=>ltList.innerHTML+=`<div class="flex justify-between py-1.5 text-sm text-white border-b border-slate-700/50"><span>${n}</span><span>${lMap[n]} CZK</span></div>`);
+
+    const mMap = {};
+    appData.payments.forEach(p=>{
+      let m = cleanMonthString(p.AppliedMonth);
+      if(!m) m = "Unknown";
+      if(!mMap[m]) mMap[m]={t:0,m:[]};
+      mMap[m].t+=Number(p.Amount);
+      mMap[m].m.push({n:p.MemberName,a:p.Amount});
+    });
+
+    const accList = document.getElementById('reports-monthly-list'); accList.innerHTML="";
+    Object.keys(mMap).sort().reverse().forEach(m=>{
+      let sHTML="";
+      mMap[m].m.forEach(mem=>sHTML+=`<div class="flex justify-between text-sm"><span class="text-slate-300">${mem.n}</span><span class="text-white">${mem.a} CZK</span></div>`);
+      accList.innerHTML+=`<div class="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-700/30 cursor-pointer hover:bg-slate-700" onclick="this.nextElementSibling.classList.toggle('hidden')"><p class="font-bold text-white text-sm">${formatMonthText(m)}</p><p class="font-bold text-blue-400 text-sm">${mMap[m].t} CZK <i class="fa-solid fa-chevron-down ml-2 text-xs"></i></p></div><div class="hidden p-4 bg-slate-800 flex flex-col gap-2 border-b border-slate-700">${sHTML}</div>`;
+    });
+  }
+
+// --- MONTHLY GIVING REPORT (no names shown) ---
+  function renderGivingReport() {
+    const gMap = {};
+    appData.gives.forEach(g => {
+      const d = new Date(g.GiveDate);
+      const m = isNaN(d.getTime()) ? "Unknown" : `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      gMap[m] = (gMap[m] || 0) + Number(g.Amount);
+    });
+    const list = document.getElementById('reports-giving-list');
+    list.innerHTML = "";
+    const keys = Object.keys(gMap).sort().reverse();
+    if (keys.length === 0) {
+      list.innerHTML = `<p class="text-sm text-slate-500 italic p-4 text-center">No giving yet.</p>`;
+      return;
+    }
+    keys.forEach(m => {
+      list.innerHTML += `<div class="p-4 border-b border-slate-700 flex justify-between items-center"><p class="font-bold text-white text-sm">${formatMonthText(m)}</p><p class="font-bold text-blue-400 text-sm">${gMap[m]} CZK</p></div>`;
+    });
+  }
+
+  // --- TAB 4: BALANCE LOGIC ---
+  function renderBalanceTab() {
+    let coll = 0; appData.payments.forEach(p=>coll+=Number(p.Amount));
+    let given = 0; appData.gives.forEach(g=>given+=Number(g.Amount));
+    let sp = 0; const eList = document.getElementById('expense-history-list'); eList.innerHTML="";
+    appData.expenses.forEach(e=>{
+      sp+=Number(e.Amount);
+      eList.innerHTML+=`<div class="bg-slate-800 rounded-lg p-3 border border-slate-700 flex justify-between items-center mb-2"><div><p class="font-bold text-sm text-white">${e.Reason}</p><p class="text-xs text-slate-400">${new Date(e.ExpenseDate).toLocaleDateString()}</p></div><div class="flex items-center gap-3"><span class="font-bold text-red-400 text-sm">-${e.Amount} CZK</span><button onclick="deleteExpense(${e.Amount}, '${e.Reason}')" class="text-slate-500 hover:text-red-400"><i class="fa-solid fa-trash-can"></i></button></div></div>`;
+    });
+    document.getElementById('bal-collected').innerText=coll+" CZK";
+    document.getElementById('bal-given').innerText=given+" CZK";
+    document.getElementById('bal-spent').innerText=sp+" CZK";
+    document.getElementById('bal-current').innerText=(coll+given-sp)+" CZK";
+  }
+
+  async function saveExpense() {
+    const a=document.getElementById('new-exp-amount').value; const r=document.getElementById('new-exp-reason').value;
+    if(!a||!r) return alert("Enter amount and reason");
+    const btn = document.getElementById('btn-save-expense'); btn.innerText = "Saving..."; btn.disabled = true;
+    await apiCall('addExpense',{amount:a,reason:r});
+    document.getElementById('new-exp-amount').value=""; document.getElementById('new-exp-reason').value="";
+    btn.innerText = "Save Expense"; btn.disabled = false;
+    loadAllData();
+  }
+
+  async function deletePayment(n,m) {
+    if(confirm(`Delete payment for ${formatMonthText(m)}?`)){
+      const res = await apiCall('deletePayment',{memberName:n,appliedMonth:m});
+      if (res && !res.ok) alert("Backend Error: " + res.error);
+      loadAllData();
+    }
+  }
+  
+  async function deleteExpense(a,r) {
+    if(confirm(`Delete expense?`)){
+      const res = await apiCall('deleteExpense',{amount:a,reason:r});
+      if (res && !res.ok) alert("Backend Error: " + res.error);
+      loadAllData();
+    }
+  }
+
+// --- TAB "GIVE" LOGIC ---
+  function renderGiveTab() {
+    const list = document.getElementById('give-history-list');
+    list.innerHTML = "";
+    if (appData.gives.length === 0) {
+      list.innerHTML = `<p class="text-sm text-slate-500 italic py-2 text-center">No gives yet. Be the first! 💗</p>`;
+      return;
+    }
+    const sorted = [...appData.gives].sort((a,b) => new Date(b.GiveDate) - new Date(a.GiveDate));
+    sorted.forEach(g => {
+      const safeName = String(g.GiverName).replace(/'/g, "\\'");
+      list.innerHTML += `<div class="bg-slate-800 rounded-lg p-3 border border-slate-700 flex justify-between items-center"><div><p class="font-bold text-sm text-white">${g.GiverName}</p><p class="text-xs text-slate-400">${new Date(g.GiveDate).toLocaleDateString()}</p></div><div class="flex items-center gap-3"><span class="font-bold text-blue-400 text-sm">+${g.Amount} CZK</span><button onclick="deleteGive(${g.Amount}, '${safeName}')" class="text-slate-500 hover:text-red-400"><i class="fa-solid fa-trash-can"></i></button></div></div>`;
+    });
+  }
+
+  async function saveGive() {
+    const a = document.getElementById('new-give-amount').value;
+    const n = document.getElementById('new-give-name').value;
+    if(!a || !n) return alert("Enter amount and giver name");
+    const btn = document.getElementById('btn-save-give');
+    btn.innerText = "Saving..."; btn.disabled = true;
+    const res = await apiCall('addGive', { amount: a, giverName: n });
+    btn.innerHTML = '<i class="fa-solid fa-hand-holding-heart mr-2"></i>Give'; btn.disabled = false;
+    if (res && !res.ok) { alert("Backend Error: " + res.error); return; }
+    document.getElementById('new-give-amount').value = "";
+    document.getElementById('new-give-name').value = "";
+    loadAllData();
+  }
+
+  async function deleteGive(a, n) {
+    if(confirm(`Delete give of ${a} CZK from ${n}?`)){
+      const res = await apiCall('deleteGive', { amount: a, giverName: n });
+      if (res && !res.ok) alert("Backend Error: " + res.error);
+      loadAllData();
+    }
+  }
+
+// --- CONFIRMATION BUTTON LOGIC (NEW!) ---
+  async function executeAction(actionType, arg1, arg2, btnElement) {
+    // 1. Hide the buttons and show a loading spinner so you can't click twice
+    const parentBubble = btnElement.closest('.chat-bubble');
+    parentBubble.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Processing your request...`;
+
+    // 2. Look at what type of action it is, and send it to Google
+    if (actionType === 'PAYMENT') {
+      await apiCall('addPayment', { memberName: arg1, amount: arg2 });
+      parentBubble.innerHTML = `✅ Successfully logged ${arg2} CZK for ${arg1}!`;
+    } 
+    else if (actionType === 'EXPENSE') {
+      await apiCall('addExpense', { reason: arg1, amount: arg2 });
+      parentBubble.innerHTML = `✅ Successfully logged expense of ${arg2} CZK for: ${arg1}!`;
+    } 
+    else if (actionType === 'MEMBER') {
+      await apiCall('addMember', { fullName: arg1, email: arg2 });
+      parentBubble.innerHTML = `✅ Successfully added ${arg1} to the group!`;
+    }
+
+    // 3. Refresh the screen invisibly!
+    loadAllData();
+  }
+
+  function cancelAction(btnElement) {
+    // If you click "No", just change the text and do nothing else!
+    const parentBubble = btnElement.closest('.chat-bubble');
+    parentBubble.innerHTML = `❌ Action cancelled. Nothing was saved.`;
+    parentBubble.classList.remove('border-blue-500', 'bg-blue-900/30');
+    parentBubble.classList.add('bg-slate-800', 'text-slate-400');
+  }
+
+  // --- AI AGENT (WITH CONFIRMATIONS!) ---
+  // --- AI AGENT (WITH MEMORY & CONFIRMATIONS!) ---
+  async function sendToAI() {
+  const inputEl = document.getElementById('ai-input');
+  const userText = inputEl.value.trim();
+  if (!userText) return;
+
+  // Only allow ONE AI request at a time (this stops the "timed out" pile-up)
+  if (window.aiBusy) return;
+  window.aiBusy = true;
+
+  // MEMORY: keep last 4 messages for context
+  window.chatMemory = window.chatMemory || [];
+  window.chatMemory.push("User: " + userText);
+  if (window.chatMemory.length > 4) window.chatMemory.shift();
+
+  const chatHistory = document.getElementById('chat-history');
+  chatHistory.innerHTML += `<div class="chat-bubble chat-user">${userText}</div>`;
+  inputEl.value = '';
+
+  const typingId = "typing-" + Date.now();
+  chatHistory.innerHTML += `<div id="${typingId}" class="chat-bubble chat-ai italic text-slate-400">Thinking...</div>`;
+  chatHistory.scrollTop = chatHistory.scrollHeight;
+
+  const recentConversation = window.chatMemory.join("\n");
+
+  // Send ONLY the short message + history. The long instructions now live in the
+  // backend, which keeps this request URL small so it can't fail from length.
+  const res = await apiCall('askAI', { message: userText, history: recentConversation });
+  document.getElementById(typingId).remove();
+  window.aiBusy = false; // answer arrived - now the next message is allowed
+
+  if (res.ok) {
+    window.chatMemory.push("Accountant: " + res.answer);
+    if (window.chatMemory.length > 4) window.chatMemory.shift();
+
+    const answer = res.answer;
+    const cleanAmount = (txt) => (String(txt).match(/\d+(\.\d+)?/) || ['0'])[0];
+    const esc = (txt) => String(txt).trim().replace(/'/g, "\\'");
+
+    if (answer.includes('###PAYMENT|')) {
+      const parts = answer.split('###PAYMENT|')[1].split('###')[0].split('|');
+      const name = parts[0] ? parts[0].trim() : '';
+      const amount = cleanAmount(parts[1] || '');
+      chatHistory.innerHTML += `
+        <div class="chat-bubble chat-ai border border-blue-500 bg-blue-900/30">
+          <p class="mb-2 font-bold">Confirm: log ${amount} CZK payment for ${name}?</p>
+          <button onclick="executeAction('PAYMENT', '${esc(name)}', '${amount}', this)" class="bg-green-600 px-3 py-1 rounded mr-2">Yes</button>
+          <button onclick="cancelAction(this)" class="bg-red-600 px-3 py-1 rounded">No</button>
+        </div>`;
+    }
+    else if (answer.includes('###EXPENSE|')) {
+      const parts = answer.split('###EXPENSE|')[1].split('###')[0].split('|');
+      const reason = parts[0] ? parts[0].trim() : '';
+      const amount = cleanAmount(parts[1] || '');
+      chatHistory.innerHTML += `
+        <div class="chat-bubble chat-ai border border-blue-500 bg-blue-900/30">
+          <p class="mb-2 font-bold">Confirm: log ${amount} CZK expense for "${reason}"?</p>
+          <button onclick="executeAction('EXPENSE', '${esc(reason)}', '${amount}', this)" class="bg-green-600 px-3 py-1 rounded mr-2">Yes</button>
+          <button onclick="cancelAction(this)" class="bg-red-600 px-3 py-1 rounded">No</button>
+        </div>`;
+    }
+    else if (answer.includes('###MEMBER|')) {
+      const parts = answer.split('###MEMBER|')[1].split('###')[0].split('|');
+      const name = parts[0] ? parts[0].trim() : '';
+      const email = parts[1] ? parts[1].trim() : '';
+      chatHistory.innerHTML += `
+        <div class="chat-bubble chat-ai border border-blue-500 bg-blue-900/30">
+          <p class="mb-2 font-bold">Confirm: add new member "${name}"${email ? ' &lt;' + email + '&gt;' : ''}?</p>
+          <button onclick="executeAction('MEMBER', '${esc(name)}', '${esc(email)}', this)" class="bg-green-600 px-3 py-1 rounded mr-2">Yes</button>
+          <button onclick="cancelAction(this)" class="bg-red-600 px-3 py-1 rounded">No</button>
+        </div>`;
+    }
+    else {
+      chatHistory.innerHTML += `<div class="chat-bubble chat-ai">${answer}</div>`;
+    }
+  }
+  else {
+    // Show the actual problem instead of failing silently
+    chatHistory.innerHTML += `<div class="chat-bubble chat-ai" style="background-color:#7f1d1d;color:#fecaca;">⚠️ ${res.error || "Something went wrong. Please try again."}</div>`;
+  }
+
+  chatHistory.scrollTop = chatHistory.scrollHeight;
+}
+
+// --- VOICE RECOGNITION (NEW!) ---
+  // --- FIND THIS FUNCTION AND CHANGE THE LINE INSIDE ---
+// --- ROBUST VOICE RECOGNITION ---
+  function startVoice() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("Voice input isn't supported in this browser. Try Chrome on Android or desktop.");
+    return;
+  }
+
+  if (window.activeRecognition) return;
+
+  const recognition = new SpeechRecognition();
+  window.activeRecognition = recognition;
+
+  recognition.lang = document.getElementById('voice-lang').value;
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  const micBtn = document.getElementById('btn-voice');
+  const inputEl = document.getElementById('ai-input');
+
+  const autoStop = setTimeout(() => {
+    try { recognition.stop(); } catch (err) {}
+  }, 8000);
+
+  function resetMic() {
+    clearTimeout(autoStop);
+    micBtn.classList.replace('bg-red-600', 'bg-slate-700');
+    micBtn.classList.remove('animate-pulse');
+    window.activeRecognition = null;
+  }
+
+  recognition.onresult = async function(event) {
+    if (!(event.results.length > 0 && event.results[0].length > 0)) {
+      resetMic();
+      return;
+    }
+
+    const rawText = event.results[0][0].transcript;
+    resetMic();
+
+    // show the raw words right away, then tidy them
+    inputEl.value = rawText;
+
+    const langValue = document.getElementById('voice-lang').value;
+
+    // ask the AI to rewrite the transcript into clean English / Amharic
+    const res = await apiCall('cleanText', { text: rawText, lang: langValue });
+    if (res.ok && res.clean) {
+      inputEl.value = res.clean; // swap in the tidy version
+    }
+    // if cleaning fails for any reason, we keep the raw words so voice still works
+
+    sendToAI(); // now send the clean message
+  };
+
+  recognition.onerror = function(event) {
+    console.error("Speech error:", event.error);
+    resetMic();
+    if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+      alert("Microphone blocked. The app must run over HTTPS, and you must allow mic access.");
+    } else if (event.error === 'no-speech') {
+      alert("I didn't hear anything. Please try again and speak clearly.");
+    } else if (event.error === 'language-not-supported') {
+      alert("This language isn't supported for voice here. Try switching to EN.");
+    } else {
+      alert("Mic error: " + event.error);
+    }
+  };
+
+  recognition.onend = function() {
+    resetMic();
+  };
+
+  micBtn.classList.replace('bg-slate-700', 'bg-red-600');
+  micBtn.classList.add('animate-pulse');
+  try {
+    recognition.start();
+  } catch (err) {
+    console.error("Could not start recognition:", err);
+    resetMic();
+    alert("Could not start the microphone. Please try again.");
+  }
+}
+
+// --- GIVE TAB GATEKEEPER ---
+  function openGiveTab() {
+    // Already unlocked? Walk right in.
+    if (giveUnlocked) {
+      switchTab('give');
+      return;
+    }
+    // Locked: challenge with a PIN prompt
+    const entered = prompt("🔒 This area is confidential.\nEnter the Admin PIN to view:");
+    if (entered === null) return; // user pressed Cancel - do nothing quietly
+    if (entered.trim() === ADMIN_PIN) {
+      giveUnlocked = true; // stays unlocked until the page is refreshed
+      switchTab('give');
+    } else {
+      alert("❌ Wrong PIN. Access denied.");
+    }
+  }
+
+  // --- TAB SWITCHER LOGIC ---
+  function switchTab(t) {
+    document.querySelectorAll('.tab-content').forEach(e=> {
+      e.classList.remove('active');
+      if(e.id === 'tab-ai') e.style.display = 'none'; // Ensure AI flexbox hides correctly
+    });
+    
+    const target = document.getElementById('tab-'+t);
+    target.classList.add('active');
+    if(t === 'ai') target.style.display = 'flex'; // Ensure AI tab uses flexbox when shown
+
+    document.querySelectorAll('.nav-btn').forEach(e=>e.classList.remove('active'));
+    
+    // Highlight bottom bar icon if it exists (the floating button doesn't have a bottom text link)
+    if (document.getElementById('nav-'+t)) {
+        document.getElementById('nav-'+t).classList.add('active');
+    }
+  }
+
+  window.onload = loadAllData;
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+  }
+</script>
+</body>
+</html>
