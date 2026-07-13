@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Group Contribution Tracker</title>
+  <title>Fellow Financial Application</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -33,7 +33,7 @@
   
   <div class="bg-slate-900 p-4 border-b border-slate-700 flex justify-between items-center z-10">
     <div>
-      <h1 class="font-bold text-lg leading-tight text-white">Group Contribution Tracker</h1>
+      <h1 class="font-bold text-lg leading-tight text-white">Fellow Financial Application</h1>
       <p id="sync-status" class="text-xs text-yellow-400 mt-1"><i class="fa-solid fa-spinner fa-spin"></i> Booting up...</p>
     </div>
   </div>
@@ -47,7 +47,7 @@
           <input type="text" id="new-member-name" placeholder="Full name" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
           <div class="flex gap-2">
             <input type="email" id="new-member-email" placeholder="Email (optional)" class="flex-grow bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
-            <button id="btn-add-member" onclick="addMember()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition">Add</button>
+            <button id="btn-add-member" onclick="confirmAction('Are you sure you want to add this new member?', addMember)" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition">Add</button>
           </div>
         </div>
       </div>
@@ -56,16 +56,44 @@
     </div>
 
     <div id="edit-modal" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center px-4">
-      <div class="bg-slate-800 rounded-xl p-5 border border-slate-700 w-full max-w-sm shadow-2xl">
+      <div class="bg-slate-800 rounded-xl p-5 border border-slate-700 w-full max-w-sm shadow-2xl max-h-[90vh] overflow-y-auto">
         <h2 class="text-lg font-bold text-white mb-4">Edit Profile</h2>
         <input type="hidden" id="edit-old-name">
+
+        <div class="flex flex-col items-center mb-4">
+          <div id="edit-avatar" class="w-24 h-24 rounded-full bg-slate-700 border-2 border-slate-600 overflow-hidden flex items-center justify-center text-3xl font-bold text-slate-300 mb-2"></div>
+          
+          <input type="file" id="edit-photo-gallery" accept=".jpg, .jpeg, .png, image/jpeg, image/png" class="hidden" onchange="photoPicked(this)">
+          <input type="file" id="edit-photo-camera" accept=".jpg, .jpeg, .png, image/jpeg, image/png" capture="user" class="hidden" onchange="photoPicked(this)">
+          
+          <div class="flex gap-2">
+            <button onclick="openCameraUI()" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg border border-slate-600"><i class="fa-solid fa-camera mr-1"></i>Camera</button>
+            <button onclick="document.getElementById('edit-photo-gallery').click()" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg border border-slate-600"><i class="fa-solid fa-image mr-1"></i>Gallery</button>
+          </div>
+          <p id="photo-status" class="text-[10px] text-slate-500 mt-1">Photo saves immediately</p>
+        </div>
+
         <label class="block text-xs font-bold text-slate-400 mb-1">Full Name</label>
         <input type="text" id="edit-new-name" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white mb-3 focus:outline-none focus:border-blue-500">
+        
         <label class="block text-xs font-bold text-slate-400 mb-1">Email Address</label>
-        <input type="email" id="edit-new-email" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white mb-5 focus:outline-none focus:border-blue-500">
+        <input type="email" id="edit-new-email" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white mb-3 focus:outline-none focus:border-blue-500">
+        
+        <label class="block text-xs font-bold text-slate-400 mb-1">Phone Number</label>
+        <div class="flex items-center bg-slate-900 border border-slate-700 rounded-lg mb-3 focus-within:border-blue-500 overflow-hidden">
+          <span class="px-3 text-sm text-slate-400 font-bold bg-slate-800 border-r border-slate-700 py-2">+420</span>
+          <input type="text" id="edit-new-phone" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '')" class="w-full bg-transparent px-3 py-2 text-sm text-white focus:outline-none" placeholder="123456789">
+        </div>
+
+        <label class="block text-xs font-bold text-slate-400 mb-1">Date of Birth</label>
+        <div class="flex gap-2 mb-5">
+          <select id="edit-dob-day" class="w-1/4 bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-blue-500"></select>
+          <select id="edit-dob-month" class="w-2/4 bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-blue-500"></select>
+          <select id="edit-dob-year" class="w-1/4 bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-blue-500"></select>
+        </div>
         <div class="flex gap-3">
           <button onclick="closeEditModal()" class="w-1/2 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded-lg text-sm transition">Cancel</button>
-          <button onclick="saveEditMember()" id="btn-save-edit" class="w-1/2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-lg text-sm transition">Update</button>
+          <button onclick="confirmAction('Are you sure you want to update this profile?', saveEditMember)" id="btn-save-edit" class="w-1/2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-lg text-sm transition">Update</button>
         </div>
       </div>
     </div>
@@ -80,21 +108,24 @@
         <select id="pay-amount" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-3 text-sm text-white mb-4 focus:outline-none focus:border-blue-500">
           <option value="100">100 CZK (1 month)</option><option value="200">200 CZK (2 months)</option><option value="300">300 CZK (3 months)</option><option value="400">400 CZK (4 months)</option><option value="500">500 CZK (5 months)</option><option value="600">600 CZK (6 months)</option><option value="1200">1,200 CZK (1 Year)</option>
         </select>
-        <button id="btn-save-payment" onclick="savePayment()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg text-sm transition mb-3">Save Payment</button>
+        <button id="btn-save-payment" onclick="confirmAction('Are you sure you want to save this payment?', savePayment)" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg text-sm transition mb-3">Save Payment</button>
         <div id="pay-warning-container"></div>
       </div>
       <h3 class="text-sm font-bold text-slate-300 mb-3 ml-1">Payment History</h3>
       <div id="pay-history-list" class="space-y-2"></div>
     </div>
 
-<div id="tab-give" class="tab-content">
+    <div id="tab-give" class="tab-content">
       <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 mb-4">
         <h2 class="text-sm font-bold text-slate-300 mb-3">Generosity Giving</h2>
         <div class="flex gap-2 mb-3">
           <input type="number" id="new-give-amount" placeholder="CZK" class="w-1/3 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
-          <input type="text" id="new-give-name" placeholder="Giver name" class="w-2/3 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+          
+          <input type="text" id="new-give-name" list="giver-names-list" placeholder="Giver name" class="w-2/3 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+          <datalist id="giver-names-list"></datalist>
+          
         </div>
-        <button id="btn-save-give" onclick="saveGive()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg text-sm transition"><i class="fa-solid fa-hand-holding-heart mr-2"></i>Give</button>
+        <button id="btn-save-give" onclick="confirmAction('Are you sure you want to log this generosity gift?', saveGive)" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg text-sm transition"><i class="fa-solid fa-hand-holding-heart mr-2"></i>Give</button>
       </div>
       <h3 class="text-sm font-bold text-slate-300 mb-3 ml-1">Give History</h3>
       <div id="give-history-list" class="space-y-2"></div>
@@ -116,7 +147,7 @@
 
     <div id="tab-balance" class="tab-content">
       <div class="grid grid-cols-3 gap-2 mb-4">
-        <div class="bg-slate-800 rounded-xl p-3 border border-slate-700 text-center"><p class="text-xs text-slate-400 mb-1">Collected</p><p id="bal-collected" class="text-base font-bold text-green-400">0 CZK</p></div>
+        <div class="bg-slate-800 rounded-xl p-3 border border-slate-700 text-center"><p class="text-xs text-slate-400 mb-1">Monthly Contirbution</p><p id="bal-collected" class="text-base font-bold text-green-400">0 CZK</p></div>
         <div class="bg-slate-800 rounded-xl p-3 border border-slate-700 text-center"><p class="text-xs text-slate-400 mb-1">Given</p><p id="bal-given" class="text-base font-bold text-blue-400">0 CZK</p></div>
         <div class="bg-slate-800 rounded-xl p-3 border border-slate-700 text-center"><p class="text-xs text-slate-400 mb-1">Spent</p><p id="bal-spent" class="text-base font-bold text-red-400">0 CZK</p></div>
         <div class="col-span-3 bg-blue-900/30 rounded-xl p-4 border border-blue-800 text-center shadow-[0_0_15px_rgba(59,130,246,0.2)]"><p class="text-sm text-blue-300 font-bold mb-1">Current Balance</p><p id="bal-current" class="text-3xl font-black text-white">0 CZK</p></div>
@@ -127,7 +158,7 @@
           <input type="number" id="new-exp-amount" placeholder="CZK" class="w-1/3 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
           <input type="text" id="new-exp-reason" placeholder="Reason" class="w-2/3 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
         </div>
-        <button id="btn-save-expense" onclick="saveExpense()" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded-lg text-sm border border-slate-600 transition">Save Expense</button>
+        <button id="btn-save-expense" onclick="confirmAction('Are you sure you want to log this expense?', saveExpense)" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded-lg text-sm border border-slate-600 transition">Save Expense</button>
       </div>
       <h3 class="text-sm font-bold text-slate-300 mb-3 ml-1">Spending History</h3>
       <div id="expense-history-list" class="space-y-2"></div>
@@ -139,16 +170,15 @@
           👋 Hi! I am your Fellow Accountant. Ask me anything about the team's balances, missing payments, or expenses!
         </div>
       </div>
-      <!-- REPLACE THIS WHOLE DIV IN TAB-AI -->
-<div class="flex gap-2 mt-auto">
-  <select id="voice-lang" class="bg-slate-800 border border-slate-700 text-slate-300 text-xs font-bold rounded-lg px-2">
-    <option value="en-US">EN</option>
-    <option value="am-ET">አማ</option>
-  </select>
-  <button id="btn-voice" onclick="startVoice()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-4 rounded-lg"><i class="fa-solid fa-microphone"></i></button>
-  <input type="text" id="ai-input" onkeydown="if(event.key==='Enter'){sendToAI()}" placeholder="e.g. Who owes the most money?" class="flex-grow bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500">
-  <button id="btn-send-ai" onclick="sendToAI()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-5 rounded-lg"><i class="fa-solid fa-paper-plane"></i></button>
-</div>
+      <div class="flex gap-2 mt-auto">
+        <select id="voice-lang" class="bg-slate-800 border border-slate-700 text-slate-300 text-xs font-bold rounded-lg px-2">
+          <option value="en-US">EN</option>
+          <option value="am-ET">አማ</option>
+        </select>
+        <button id="btn-voice" onclick="startVoice()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-4 rounded-lg"><i class="fa-solid fa-microphone"></i></button>
+        <input type="text" id="ai-input" onkeydown="if(event.key==='Enter'){sendToAI()}" placeholder="e.g. Who owes the most money?" class="flex-grow bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500">
+        <button id="btn-send-ai" onclick="sendToAI()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-5 rounded-lg"><i class="fa-solid fa-paper-plane"></i></button>
+      </div>
     </div>
 
   </div>
@@ -157,7 +187,7 @@
     <i class="fa-solid fa-wand-magic-sparkles text-xl"></i>
   </button>
 
- <div class="bg-slate-900 border-t border-slate-700 flex justify-between items-center p-2 pb-4 absolute bottom-0 w-full z-10">
+  <div class="bg-slate-900 border-t border-slate-700 flex justify-between items-center p-2 pb-4 absolute bottom-0 w-full z-10">
     <button onclick="switchTab('members')" id="nav-members" class="nav-btn active flex flex-col items-center p-2 w-1/5"><i class="fa-solid fa-user-group mb-1 text-lg"></i><span class="text-[10px] font-bold uppercase tracking-wider">Members</span></button>
     <button onclick="switchTab('contribution')" id="nav-contribution" class="nav-btn flex flex-col items-center p-2 w-1/5"><i class="fa-solid fa-hand-holding-dollar mb-1 text-lg"></i><span class="text-[10px] font-bold uppercase tracking-wider">Pay</span></button>
     <button onclick="openGiveTab()" id="nav-give" class="nav-btn flex flex-col items-center p-2 w-1/5"><i class="fa-solid fa-hand-holding-heart mb-1 text-lg"></i><span class="text-[10px] font-bold uppercase tracking-wider">Give</span></button>
@@ -165,17 +195,64 @@
     <button onclick="switchTab('balance')" id="nav-balance" class="nav-btn flex flex-col items-center p-2 w-1/5"><i class="fa-solid fa-wallet mb-1 text-lg"></i><span class="text-[10px] font-bold uppercase tracking-wider text-center">Bal & Exp</span></button>
   </div>
 
+  <div id="confirm-modal" class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center px-4">
+    <div class="bg-slate-800 rounded-xl p-5 border border-slate-700 w-full max-w-sm shadow-2xl">
+      <h2 class="text-lg font-bold text-white mb-2"><i class="fa-solid fa-circle-question text-blue-400 mr-2"></i>Confirm Action</h2>
+      <p id="confirm-msg" class="text-sm text-slate-300 mb-6">Are you sure?</p>
+      <div class="flex gap-3">
+        <button onclick="closeConfirmModal()" class="w-1/2 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg text-sm transition">Cancel</button>
+        <button id="btn-confirm-yes" class="w-1/2 bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg text-sm transition">Yes, Proceed</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="webcam-modal" class="fixed inset-0 bg-black/95 z-[60] hidden flex-col items-center justify-center p-4">
+    <h2 class="text-white font-bold mb-4 text-lg">Take Photo</h2>
+    <div class="relative w-full max-w-sm bg-slate-900 rounded-lg overflow-hidden border-2 border-slate-600 aspect-square flex items-center justify-center shadow-[0_0_20px_rgba(0,0,0,0.8)]">
+      <video id="webcam-video" class="w-full h-full object-cover" autoplay playsinline></video>
+    </div>
+    <div class="flex gap-3 mt-6 w-full max-w-sm">
+      <button onclick="stopWebcam()" class="w-1/2 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg transition">Cancel</button>
+      <button onclick="captureWebcam()" class="w-1/2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition"><i class="fa-solid fa-camera mr-2"></i>Snap</button>
+    </div>
+  </div>
+
 <script>
-  // ==========================================
-  // 🔴 PASTE YOUR EXACT WEB APP URL RIGHT HERE
-  // ==========================================
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxJOYP7aTEl3v1RUottSteG-lduC1wuhk-7qedudRkamNtfywvyCkScknSP3zKWGBHv/exec"; 
 
   const CURRENT_MONTH_STR = "2026-07"; 
-  // --- GIVE TAB SOFT LOCK ---
-  const ADMIN_PIN = "698846"; // 🔴 change this to your own secret PIN
-  let giveUnlocked = false; // starts locked on every page load
+  const ADMIN_PIN = "698846"; 
+  let giveUnlocked = false; 
   let appData = { members: [], payments: [], expenses: [], gives: [] };
+
+
+  // Tracks if the eye button is open or closed for each category
+  let balVisibility = { collected: false, given: false, spent: false, current: false };
+
+  function toggleBal(type) {
+    balVisibility[type] = !balVisibility[type]; // Flips from false to true (or true to false)
+    renderBalanceTab(); // Refreshes the screen instantly
+  }
+
+  // --- UNIVERSAL CONFIRMATION LOGIC ---
+  let pendingAction = null;
+
+  function confirmAction(message, actionCallback) {
+    document.getElementById('confirm-msg').innerText = message;
+    pendingAction = actionCallback;
+    document.getElementById('confirm-modal').classList.remove('hidden');
+  }
+
+  function closeConfirmModal() {
+    document.getElementById('confirm-modal').classList.add('hidden');
+    pendingAction = null;
+  }
+
+  document.getElementById('btn-confirm-yes').onclick = function() {
+    if (pendingAction) pendingAction();
+    closeConfirmModal();
+  };
+  // ------------------------------------
 
   function setStatus(msg, isError = false, isLoading = false) {
     const el = document.getElementById('sync-status');
@@ -229,6 +306,10 @@
     const res = await apiCall('getAll');
     if (res.ok) {
       appData = { members: (res.members || []).filter(m => String(m.FullName || "").trim() !== ""), payments: res.payments || [], expenses: res.expenses || [], gives: res.gives || [] };
+      
+      // ALPHABETICAL SORTING (Fixes all lists and dropdowns universally)
+      appData.members.sort((a, b) => String(a.FullName || "").localeCompare(String(b.FullName || "")));
+      
       renderAll();
       if (res.version) setStatus("Synced • Backend " + res.version);
       else setStatus("Synced with Google Sheet");
@@ -242,6 +323,15 @@
     renderReportsTab();
     renderGivingReport();
     renderBalanceTab();
+    updateGiverDatalist(); // Refreshes the Give tab Combo Box
+  }
+
+  function updateGiverDatalist() {
+    const list = document.getElementById('giver-names-list');
+    list.innerHTML = "";
+    appData.members.forEach(m => {
+      list.innerHTML += `<option value="${m.FullName}">`;
+    });
   }
 
   function cleanMonthString(val) {
@@ -286,20 +376,31 @@
     return { text: `${diffMonths} month advance payment`, style: "text-blue-400 bg-blue-900/30", monthsBehind: 0 };
   }
 
+  function avatarHTML(m, sizeClasses) {
+    const initial = String(m.FullName || "?").trim().charAt(0).toUpperCase();
+    if (m.PhotoUrl) {
+      return `<img src="${m.PhotoUrl}" class="${sizeClasses} rounded-full object-cover border border-slate-600" alt="">`;
+    }
+    return `<div class="${sizeClasses} rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center font-bold text-slate-300">${initial}</div>`;
+  }
+
   function renderMembersTab() {
     const listUI = document.getElementById('members-list-ui');
     listUI.innerHTML = "";
     appData.members.forEach(m => {
       const name = m.FullName;
-      const email = m.Email || "";
       const status = getMemberStatus(name);
+      const safeName = String(name).replace(/'/g, "\\'");
       listUI.innerHTML += `
         <div class="bg-slate-800 rounded-xl p-3 border border-slate-700 flex justify-between items-center hover:border-slate-500">
-          <div onclick="jumpToPay('${name.replace(/'/g, "\\'")}')" class="cursor-pointer flex-grow">
-            <h3 class="font-bold text-white">${name}</h3>
-            <span class="text-xs px-2 py-0.5 rounded-full mt-1 inline-block ${status.style}">${status.text}</span>
+          <div onclick="jumpToPay('${safeName}')" class="cursor-pointer flex-grow flex items-center gap-3">
+            ${avatarHTML(m, "w-10 h-10 text-base")}
+            <div>
+              <h3 class="font-bold text-white">${name}</h3>
+              <span class="text-xs px-2 py-0.5 rounded-full mt-1 inline-block ${status.style}">${status.text}</span>
+            </div>
           </div>
-          <button onclick="openEditModal('${name.replace(/'/g, "\\'")}', '${email.replace(/'/g, "\\'")}')" class="text-xs text-slate-400 hover:text-white bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-600">Edit profile</button>
+          <button onclick="openEditModal('${safeName}')" class="text-xs text-slate-400 hover:text-white bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-600">Edit profile</button>
         </div>`;
     });
   }
@@ -317,10 +418,44 @@
     loadAllData();
   }
 
-  function openEditModal(oldName, email) {
-    document.getElementById('edit-old-name').value = oldName;
-    document.getElementById('edit-new-name').value = oldName;
-    document.getElementById('edit-new-email').value = email === "undefined" ? "" : email;
+  function buildDobSelects() {
+    const daySel = document.getElementById('edit-dob-day');
+    const monSel = document.getElementById('edit-dob-month');
+    const yearSel = document.getElementById('edit-dob-year');
+    daySel.innerHTML = '<option value="">Day</option>';
+    for (let d = 1; d <= 31; d++) daySel.innerHTML += `<option value="${String(d).padStart(2,'0')}">${d}</option>`;
+    const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    monSel.innerHTML = '<option value="">Month</option>';
+    months.forEach((m, i) => monSel.innerHTML += `<option value="${String(i+1).padStart(2,'0')}">${m}</option>`);
+    yearSel.innerHTML = '<option value="">Year</option>';
+    const thisYear = new Date().getFullYear();
+    for (let y = thisYear; y >= 1930; y--) yearSel.innerHTML += `<option value="${y}">${y}</option>`;
+  }
+
+  function openEditModal(name) {
+    const m = appData.members.find(x => String(x.FullName).toLowerCase() === String(name).toLowerCase());
+    if (!m) return;
+    document.getElementById('edit-old-name').value = m.FullName;
+    document.getElementById('edit-new-name').value = m.FullName;
+    document.getElementById('edit-new-email').value = m.Email || "";
+    
+    let savedPhone = String(m.Phone || "");
+    if (savedPhone.startsWith("+420")) {
+      savedPhone = savedPhone.replace("+420", "");
+    }
+    document.getElementById('edit-new-phone').value = savedPhone;
+
+    const b = String(m.Birthday || "").trim().split("T")[0];
+    const parts = b.split("-");
+    document.getElementById('edit-dob-year').value  = parts.length === 3 ? parts[0] : "";
+    document.getElementById('edit-dob-month').value = parts.length === 3 ? parts[1] : "";
+    document.getElementById('edit-dob-day').value   = parts.length === 3 ? parts[2] : "";
+
+    const av = document.getElementById('edit-avatar');
+    if (m.PhotoUrl) av.innerHTML = `<img src="${m.PhotoUrl}" class="w-full h-full object-cover" alt="">`;
+    else av.innerText = String(m.FullName).trim().charAt(0).toUpperCase();
+
+    document.getElementById('photo-status').innerText = "Photo saves immediately";
     document.getElementById('edit-modal').classList.remove('hidden');
   }
 
@@ -330,13 +465,132 @@
     const oldName = document.getElementById('edit-old-name').value;
     const newName = document.getElementById('edit-new-name').value;
     const newEmail = document.getElementById('edit-new-email').value;
+    
+    let rawPhone = document.getElementById('edit-new-phone').value.trim();
+    let newPhone = rawPhone !== "" ? "+420" + rawPhone : "";
+
+    const d  = document.getElementById('edit-dob-day').value;
+    const mo = document.getElementById('edit-dob-month').value;
+    const y  = document.getElementById('edit-dob-year').value;
+    let birthday = "";
+    if (d && mo && y) birthday = `${y}-${mo}-${d}`;
+    else if (d || mo || y) return alert("Please choose day, month AND year (or leave all three empty).");
+
     if(!newName.trim()) return alert("Name cannot be blank");
     const btn = document.getElementById('btn-save-edit');
     btn.innerText = "Saving..."; btn.disabled = true;
-    await apiCall('editMember', { oldName: oldName, newName: newName, newEmail: newEmail });
+    
+    await apiCall('editMember', { oldName: oldName, newName: newName, newEmail: newEmail, birthday: birthday, newPhone: newPhone });
+    
     closeEditModal();
     btn.innerText = "Update"; btn.disabled = false;
     loadAllData();
+  }
+
+  // --- MEMBER PHOTO ---
+  function photoPicked(inputEl) {
+    const file = inputEl.files && inputEl.files[0];
+    if (!file) return;
+    document.getElementById('photo-status').innerText = "Preparing photo...";
+
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = () => { img.src = reader.result; };
+    reader.readAsDataURL(file);
+
+    img.onload = () => {
+      const MAX = 512;
+      let w = img.width, h = img.height;
+      if (w > h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+      else if (h >= w && h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+
+      const base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+      uploadPhoto(base64);
+    };
+    inputEl.value = ""; 
+  }
+
+  async function uploadPhoto(base64) {
+    const memberName = document.getElementById('edit-old-name').value;
+    const status = document.getElementById('photo-status');
+    status.innerText = "Uploading...";
+    try {
+      const resp = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'uploadPhoto', memberName: memberName, imageBase64: base64 })
+      });
+      const res = await resp.json();
+      if (res.ok) {
+        status.innerText = "✅ Photo saved!";
+        document.getElementById('edit-avatar').innerHTML = `<img src="${res.photoUrl}" class="w-full h-full object-cover" alt="">`;
+        loadAllData();
+      } else {
+        status.innerText = "⚠️ " + (res.error || "Upload failed");
+      }
+    } catch (err) {
+      status.innerText = "⚠️ Upload failed — check internet and try again";
+    }
+  }
+
+  // --- PC WEBCAM LOGIC ---
+  let webcamStream = null;
+
+  function openCameraUI() {
+    if (/Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+      document.getElementById('edit-photo-camera').click();
+      return;
+    }
+    document.getElementById('webcam-modal').classList.remove('hidden');
+    document.getElementById('webcam-modal').classList.add('flex');
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+      .then(function(stream) {
+        webcamStream = stream;
+        const video = document.getElementById('webcam-video');
+        video.srcObject = stream;
+        video.play();
+      })
+      .catch(function(err) {
+        alert("Could not access PC camera. Make sure you click 'Allow' in your browser!");
+        stopWebcam();
+      });
+  }
+
+  function stopWebcam() {
+    if (webcamStream) {
+      webcamStream.getTracks().forEach(track => track.stop());
+      webcamStream = null;
+    }
+    document.getElementById('webcam-modal').classList.add('hidden');
+    document.getElementById('webcam-modal').classList.remove('flex');
+  }
+
+  function captureWebcam() {
+    document.getElementById('photo-status').innerText = "Preparing photo...";
+    const video = document.getElementById('webcam-video');
+    const canvas = document.createElement('canvas');
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const MAX = 512;
+    let w = canvas.width, h = canvas.height;
+    if (w > h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+    else if (h >= w && h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+
+    const resizeCanvas = document.createElement('canvas');
+    resizeCanvas.width = w; resizeCanvas.height = h;
+    resizeCanvas.getContext('2d').drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, w, h);
+
+    const base64 = resizeCanvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+    stopWebcam();
+    uploadPhoto(base64);
   }
 
   // --- TAB 2: CONTRIBUTION LOGIC ---
@@ -435,7 +689,6 @@
     });
   }
 
-// --- MONTHLY GIVING REPORT (no names shown) ---
   function renderGivingReport() {
     const gMap = {};
     appData.gives.forEach(g => {
@@ -464,10 +717,20 @@
       sp+=Number(e.Amount);
       eList.innerHTML+=`<div class="bg-slate-800 rounded-lg p-3 border border-slate-700 flex justify-between items-center mb-2"><div><p class="font-bold text-sm text-white">${e.Reason}</p><p class="text-xs text-slate-400">${new Date(e.ExpenseDate).toLocaleDateString()}</p></div><div class="flex items-center gap-3"><span class="font-bold text-red-400 text-sm">-${e.Amount} CZK</span><button onclick="deleteExpense(${e.Amount}, '${e.Reason}')" class="text-slate-500 hover:text-red-400"><i class="fa-solid fa-trash-can"></i></button></div></div>`;
     });
-    document.getElementById('bal-collected').innerText=coll+" CZK";
-    document.getElementById('bal-given').innerText=given+" CZK";
-    document.getElementById('bal-spent').innerText=sp+" CZK";
-    document.getElementById('bal-current').innerText=(coll+given-sp)+" CZK";
+
+    // A mini-function to build the *** text and the eye button
+    const formatBal = (val, type) => {
+      const isVis = balVisibility[type];
+      const icon = isVis ? 'fa-eye-slash' : 'fa-eye'; // Changes icon if open/closed
+      const displayVal = isVis ? val + ' CZK' : '*** CZK';
+      return `${displayVal} <button onclick="toggleBal('${type}')" class="text-slate-500 hover:text-slate-300 ml-2 text-sm transition-colors"><i class="fa-solid ${icon}"></i></button>`;
+    };
+
+    // Push the hidden/visible numbers to the screen
+    document.getElementById('bal-collected').innerHTML = formatBal(coll, 'collected');
+    document.getElementById('bal-given').innerHTML = formatBal(given, 'given');
+    document.getElementById('bal-spent').innerHTML = formatBal(sp, 'spent');
+    document.getElementById('bal-current').innerHTML = formatBal(coll+given-sp, 'current');
   }
 
   async function saveExpense() {
@@ -533,13 +796,11 @@
     }
   }
 
-// --- CONFIRMATION BUTTON LOGIC (NEW!) ---
+// --- CONFIRMATION BUTTON LOGIC (AI CHAT) ---
   async function executeAction(actionType, arg1, arg2, btnElement) {
-    // 1. Hide the buttons and show a loading spinner so you can't click twice
     const parentBubble = btnElement.closest('.chat-bubble');
     parentBubble.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Processing your request...`;
 
-    // 2. Look at what type of action it is, and send it to Google
     if (actionType === 'PAYMENT') {
       await apiCall('addPayment', { memberName: arg1, amount: arg2 });
       parentBubble.innerHTML = `✅ Successfully logged ${arg2} CZK for ${arg1}!`;
@@ -552,31 +813,25 @@
       await apiCall('addMember', { fullName: arg1, email: arg2 });
       parentBubble.innerHTML = `✅ Successfully added ${arg1} to the group!`;
     }
-
-    // 3. Refresh the screen invisibly!
     loadAllData();
   }
 
   function cancelAction(btnElement) {
-    // If you click "No", just change the text and do nothing else!
     const parentBubble = btnElement.closest('.chat-bubble');
     parentBubble.innerHTML = `❌ Action cancelled. Nothing was saved.`;
     parentBubble.classList.remove('border-blue-500', 'bg-blue-900/30');
     parentBubble.classList.add('bg-slate-800', 'text-slate-400');
   }
 
-  // --- AI AGENT (WITH CONFIRMATIONS!) ---
-  // --- AI AGENT (WITH MEMORY & CONFIRMATIONS!) ---
+  // --- AI AGENT LOGIC ---
   async function sendToAI() {
   const inputEl = document.getElementById('ai-input');
   const userText = inputEl.value.trim();
   if (!userText) return;
 
-  // Only allow ONE AI request at a time (this stops the "timed out" pile-up)
   if (window.aiBusy) return;
   window.aiBusy = true;
 
-  // MEMORY: keep last 4 messages for context
   window.chatMemory = window.chatMemory || [];
   window.chatMemory.push("User: " + userText);
   if (window.chatMemory.length > 4) window.chatMemory.shift();
@@ -591,11 +846,9 @@
 
   const recentConversation = window.chatMemory.join("\n");
 
-  // Send ONLY the short message + history. The long instructions now live in the
-  // backend, which keeps this request URL small so it can't fail from length.
   const res = await apiCall('askAI', { message: userText, history: recentConversation });
   document.getElementById(typingId).remove();
-  window.aiBusy = false; // answer arrived - now the next message is allowed
+  window.aiBusy = false; 
 
   if (res.ok) {
     window.chatMemory.push("Accountant: " + res.answer);
@@ -643,15 +896,12 @@
     }
   }
   else {
-    // Show the actual problem instead of failing silently
     chatHistory.innerHTML += `<div class="chat-bubble chat-ai" style="background-color:#7f1d1d;color:#fecaca;">⚠️ ${res.error || "Something went wrong. Please try again."}</div>`;
   }
 
   chatHistory.scrollTop = chatHistory.scrollHeight;
 }
 
-// --- VOICE RECOGNITION (NEW!) ---
-  // --- FIND THIS FUNCTION AND CHANGE THE LINE INSIDE ---
 // --- ROBUST VOICE RECOGNITION ---
   function startVoice() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -693,19 +943,16 @@
     const rawText = event.results[0][0].transcript;
     resetMic();
 
-    // show the raw words right away, then tidy them
     inputEl.value = rawText;
 
     const langValue = document.getElementById('voice-lang').value;
 
-    // ask the AI to rewrite the transcript into clean English / Amharic
     const res = await apiCall('cleanText', { text: rawText, lang: langValue });
     if (res.ok && res.clean) {
-      inputEl.value = res.clean; // swap in the tidy version
+      inputEl.value = res.clean; 
     }
-    // if cleaning fails for any reason, we keep the raw words so voice still works
 
-    sendToAI(); // now send the clean message
+    sendToAI(); 
   };
 
   recognition.onerror = function(event) {
@@ -739,16 +986,14 @@
 
 // --- GIVE TAB GATEKEEPER ---
   function openGiveTab() {
-    // Already unlocked? Walk right in.
     if (giveUnlocked) {
       switchTab('give');
       return;
     }
-    // Locked: challenge with a PIN prompt
     const entered = prompt("🔒 This area is confidential.\nEnter the Admin PIN to view:");
-    if (entered === null) return; // user pressed Cancel - do nothing quietly
+    if (entered === null) return; 
     if (entered.trim() === ADMIN_PIN) {
-      giveUnlocked = true; // stays unlocked until the page is refreshed
+      giveUnlocked = true; 
       switchTab('give');
     } else {
       alert("❌ Wrong PIN. Access denied.");
@@ -759,27 +1004,28 @@
   function switchTab(t) {
     document.querySelectorAll('.tab-content').forEach(e=> {
       e.classList.remove('active');
-      if(e.id === 'tab-ai') e.style.display = 'none'; // Ensure AI flexbox hides correctly
+      if(e.id === 'tab-ai') e.style.display = 'none'; 
     });
     
     const target = document.getElementById('tab-'+t);
     target.classList.add('active');
-    if(t === 'ai') target.style.display = 'flex'; // Ensure AI tab uses flexbox when shown
+    if(t === 'ai') target.style.display = 'flex'; 
 
     document.querySelectorAll('.nav-btn').forEach(e=>e.classList.remove('active'));
     
-    // Highlight bottom bar icon if it exists (the floating button doesn't have a bottom text link)
     if (document.getElementById('nav-'+t)) {
         document.getElementById('nav-'+t).classList.add('active');
     }
   }
 
-  window.onload = loadAllData;
+  window.onload = function() { buildDobSelects(); loadAllData(); };
 </script>
+
 <script>
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js');
   }
+
 </script>
 </body>
 </html>
