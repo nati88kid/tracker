@@ -258,9 +258,10 @@
     <input type="text" id="announce-subject" placeholder="Email Subject" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-500 mb-3">
     
     <label class="block text-xs font-bold text-slate-400 mb-1">Target Audience</label>
-    <select id="announce-target-type" onchange="changeAnnounceTarget()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-yellow-500 mb-3">
+    <select id="announce-target-type" onchange="changeAnnounceTarget(); updateAnnouncePreview();" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-yellow-500 mb-3">
       <option value="All Members">All Members</option>
       <option value="Specific Member">Specific Member</option>
+      <option value="Specific City">Specific City</option> <!-- NEW -->
       <option value="All Small Groups">All Small Groups</option>
       <option value="Specific Small Group">Specific Small Group</option>
       <option value="All Ministry Groups">All Ministry Groups</option>
@@ -273,17 +274,20 @@
         <!-- Input for individual members -->
         <input type="text" id="announce-specific-input" onkeyup="filterAnnounceTarget()" onfocus="filterAnnounceTarget()" autocomplete="off" placeholder="Search..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-500">
         <!-- Dropdown for teams/groups -->
-        <select id="announce-specific-select" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-yellow-500 hidden"></select>
+        <select id="announce-specific-select" onchange="updateAnnouncePreview()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-yellow-500 hidden"></select>
         <!-- Auto-complete dropdown for members -->
         <div id="announce-name-dropdown" class="absolute z-50 w-full bg-slate-700 border border-slate-500 rounded-lg mt-1 hidden max-h-40 overflow-y-auto shadow-2xl"></div>
       </div>
+      <!-- NEW: Container for the selected member bubbles -->
+      <div id="announce-selected-members" class="flex flex-wrap gap-2 mt-2"></div>
     </div>
     
     <label class="block text-xs font-bold text-slate-400 mb-1">Message</label>
     <textarea id="announce-message" rows="5" placeholder="Type your announcement here..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-500 mb-4"></textarea>
     
-    <button onclick="confirmAction('Are you sure you want to blast this announcement?', sendAnnouncement)" class="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 rounded-lg text-sm transition shadow"><i class="fa-solid fa-paper-plane mr-2"></i>Blast Email</button>
-  </div>
+    <button onclick="confirmAction('Are you sure you want to blast this announcement?', sendAnnouncement)" class="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 rounded-lg text-sm transition shadow mb-2"><i class="fa-solid fa-paper-plane mr-2"></i>Blast Email</button>
+<div id="announce-recipient-preview" class="text-[11px] text-slate-400 mt-2 leading-relaxed text-center hidden"></div>
+</div>
 </div>
 
 <!-- ABOUT TAB -->
@@ -379,8 +383,21 @@
         </div>
         <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 mb-4">
           <label class="block text-xs font-bold text-slate-400 mb-2">Amount (CZK)</label>
-          <select id="pay-amount" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-3 text-sm text-white mb-4 focus:outline-none focus:border-blue-500"><option value="100">100 CZK (1 month)</option><option value="1200">1,200 CZK (1 Year)</option></select>
-          <button onclick="confirmAction('Save this payment?', savePayment)" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg text-sm transition mb-3">Save Payment</button>
+          <select id="pay-amount" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-3 text-sm text-white mb-4 focus: outline-none focus: border-blue-500">
+  <option value="100">100 CZK (1 month)</option>
+  <option value="200">200 CZK (2 months)</option>
+  <option value="300">300 CZK (3 months)</option>
+  <option value="400">400 CZK (4 months)</option>
+  <option value="500">500 CZK (5 months)</option>
+  <option value="600">600 CZK (6 months)</option>
+  <option value="700">700 CZK (7 months)</option>
+  <option value="800">800 CZK (8 months)</option>
+  <option value="900">900 CZK (9 months)</option>
+  <option value="1000">1,000 CZK (10 months)</option>
+  <option value="1100">1,100 CZK (11 months)</option>
+  <option value="1200">1,200 CZK (12 months / 1 Year)</option>
+</select>
+<button onclick="confirmAction('Save this payment?', savePayment)" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg text-sm transition mb-3">Save Payment</button>
           <div id="pay-warning-container"></div>
         </div>
         <div class="flex justify-between items-center mb-3 ml-1 mt-6"><h3 class="text-sm font-bold text-slate-300">Payment History</h3><span id="pay-lifetime-total" class="text-xs font-bold text-blue-300 bg-blue-900/40 border border-blue-800 px-2 py-1 rounded-full shadow-lg">Total Up-to-Date: 0 CZK</span></div>
@@ -480,7 +497,7 @@
 </div>
 
 <script>
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxJOYP7aTEl3v1RUottSteG-lduC1wuhk-7qedudRkamNtfywvyCkScknSP3zKWGBHv/exec"; 
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFfgiyQHNMXenOboPjlhnNSVkm5MR0pyH_OoXMW5QVeoDpEK-6g95Hts8wvq_sqYzj/exec"; 
   const CURRENT_MONTH_STR = "2026-07"; const ADMIN_PIN = "698846"; 
 let appData = { members: [], payments: [], expenses: [], gives: [], groups: [], ministries: [], programs: [] };
   let reportLimitMonths = 5; let reportLimitGives = 5; let balVisibility = { collected: false, given: false, spent: false, current: false };
@@ -528,8 +545,8 @@ let appData = { members: [], payments: [], expenses: [], gives: [], groups: [], 
 };
       appData.members.sort((a, b) => String(a.FullName || "").localeCompare(String(b.FullName || "")));
       renderAll(); 
-      if (res.version) setStatus("Synced • Backend " + res.version); else setStatus("Synced with Google Sheet");
-    } else { setStatus("Backend error, please check connection.", true); }
+      if (res.version) setStatus("Synced- " + res.version); else setStatus("Synced with Google Sheet");
+    } else { setStatus("Sync error, please check connection.", true); }
   }
 
   function renderAll() {
@@ -885,7 +902,7 @@ function captureWebcam() {
     else if(section === 'groups') { document.getElementById('bottom-nav-bar').style.display = 'none'; switchTab('groups'); }
     else if(section === 'ministries') { document.getElementById('bottom-nav-bar').style.display = 'none'; switchTab('ministries'); } // NEW
     else if(section === 'programs') { document.getElementById('bottom-nav-bar').style.display = 'none'; switchTab('programs'); }
-    else if(section === 'announcements') { document.getElementById('bottom-nav-bar').style.display = 'none'; switchTab('announcements'); }
+    else if(section === 'announcements') { document.getElementById('bottom-nav-bar').style.display = 'none'; switchTab('announcements'); changeAnnounceTarget(); }
     else if(section === 'about') { document.getElementById('bottom-nav-bar').style.display = 'none'; switchTab('about'); }
     else if(section === 'about') { document.getElementById('bottom-nav-bar').style.display = 'none'; switchTab('about'); }
   }
@@ -1131,36 +1148,62 @@ async function deleteProgram() {
 // ==========================================
 // ANNOUNCEMENTS LOGIC
 // ==========================================
+let selectedAnnounceMembers = [];
+
 function changeAnnounceTarget() {
   const type = document.getElementById('announce-target-type').value;
   const container = document.getElementById('announce-specific-container');
   const label = document.getElementById('announce-specific-label');
   const input = document.getElementById('announce-specific-input');
   const select = document.getElementById('announce-specific-select');
+  const previewEl = document.getElementById('announce-recipient-preview');
+  const tagsContainer = document.getElementById('announce-selected-members');
   
   input.value = "";
   select.innerHTML = "";
+  selectedAnnounceMembers = []; 
+  if (tagsContainer) tagsContainer.innerHTML = "";
+  previewEl.classList.add('hidden');
   
   if (type.includes("Specific")) {
     container.classList.remove('hidden');
+    
     if (type === "Specific Member") {
-      label.innerText = "Search for Member";
+      label.innerText = "Search for Member(s)";
       input.classList.remove('hidden');
       select.classList.add('hidden');
-    } else if (type === "Specific Small Group") {
+    } 
+    else if (type === "Specific City") {
+      label.innerText = "Select City";
+      input.classList.add('hidden');
+      select.classList.remove('hidden');
+      
+      const cities = [...new Set(appData.members.map(m => String(m.City || "").trim()).filter(c => c !== ""))];
+      if (cities.length === 0) {
+        select.innerHTML = `<option value="">No cities registered yet</option>`;
+      } else {
+        select.innerHTML = `<option value="">-- Choose a City --</option>`;
+        cities.forEach(c => select.innerHTML += `<option value="${c}">${c}</option>`);
+      }
+    } 
+    else if (type === "Specific Small Group") {
       label.innerText = "Select Small Group";
       input.classList.add('hidden');
       select.classList.remove('hidden');
+      select.innerHTML = `<option value="">-- Choose a Group --</option>`;
       appData.groups.forEach(g => select.innerHTML += `<option value="${g.GroupName}">${g.GroupName}</option>`);
-    } else if (type === "Specific Ministry Group") {
+    } 
+    else if (type === "Specific Ministry Group") {
       label.innerText = "Select Ministry";
       input.classList.add('hidden');
       select.classList.remove('hidden');
+      select.innerHTML = `<option value="">-- Choose a Ministry --</option>`;
       appData.ministries.forEach(m => select.innerHTML += `<option value="${m.GroupName}">${m.GroupName}</option>`);
     }
   } else {
     container.classList.add('hidden');
   }
+  updateAnnouncePreview();
 }
 
 function filterAnnounceTarget() {
@@ -1171,7 +1214,8 @@ function filterAnnounceTarget() {
   dropdown.innerHTML = "";
   if (!searchTerm) { dropdown.classList.add('hidden'); return; }
 
-  const matches = appData.members.filter(m => String(m.FullName).toLowerCase().includes(searchTerm));
+  // Don't show names in the dropdown if they have already been selected!
+  const matches = appData.members.filter(m => String(m.FullName).toLowerCase().includes(searchTerm) && !selectedAnnounceMembers.includes(m.FullName));
   
   if (matches.length > 0) {
     dropdown.classList.remove('hidden');
@@ -1184,9 +1228,93 @@ function filterAnnounceTarget() {
   }
 }
 
+// DRAW THE ROUNDED TAGS
+function renderAnnounceMemberTags() {
+  const container = document.getElementById('announce-selected-members');
+  if (!container) return;
+  container.innerHTML = "";
+  selectedAnnounceMembers.forEach(name => {
+    const safeName = String(name).replace(/'/g, "\\'");
+    container.innerHTML += `<div class="bg-yellow-900/40 border border-yellow-700 text-yellow-300 text-xs px-3 py-1.5 rounded-full flex items-center gap-2 shadow">${name} <button onclick="removeAnnounceMember('${safeName}')" class="hover:text-red-400 ml-1"><i class="fa-solid fa-xmark"></i></button></div>`;
+  });
+}
+
 function selectAnnounceName(name) {
-  document.getElementById('announce-specific-input').value = name;
+  if (!selectedAnnounceMembers.includes(name)) {
+    selectedAnnounceMembers.push(name);
+  }
+  document.getElementById('announce-specific-input').value = ""; // Clears box for the next search
   document.getElementById('announce-name-dropdown').classList.add('hidden');
+  renderAnnounceMemberTags();
+  updateAnnouncePreview();
+}
+
+function removeAnnounceMember(name) {
+  selectedAnnounceMembers = selectedAnnounceMembers.filter(m => m !== name);
+  renderAnnounceMemberTags();
+  updateAnnouncePreview();
+}
+
+// LIVE RECIPIENT PREVIEW
+function updateAnnouncePreview() {
+  const type = document.getElementById('announce-target-type').value;
+  const previewEl = document.getElementById('announce-recipient-preview');
+  let targetName = "";
+
+  if (type === "Specific City" || type === "Specific Small Group" || type === "Specific Ministry Group") {
+    targetName = document.getElementById('announce-specific-select').value;
+  }
+
+  // Stop calculating if a specific target is required but hasn't been chosen yet
+  if (type === "Specific Member" && selectedAnnounceMembers.length === 0) {
+    previewEl.classList.add('hidden');
+    return;
+  }
+  if (type.includes("Specific") && type !== "Specific Member" && !targetName) {
+    previewEl.classList.add('hidden');
+    return;
+  }
+
+  let recipients = [];
+
+  if (type === "All Members") {
+    recipients = appData.members;
+  } else if (type === "Specific Member") {
+    recipients = appData.members.filter(m => selectedAnnounceMembers.includes(m.FullName));
+  } else if (type === "Specific City") {
+    recipients = appData.members.filter(m => String(m.City).toLowerCase() === targetName.toLowerCase());
+  } else if (type === "All Small Groups" || type === "All Ministry Groups") {
+    const targetTable = type === "All Small Groups" ? appData.groups : appData.ministries;
+    let allNames = [];
+    targetTable.forEach(g => {
+      if (g.Coordinator) allNames.push(String(g.Coordinator).trim());
+      if (g.MembersList) allNames = allNames.concat(String(g.MembersList).split(',').map(n=>n.trim()));
+    });
+    recipients = appData.members.filter(m => allNames.some(n => String(n).toLowerCase() === String(m.FullName).toLowerCase()));
+  } else if (type === "Specific Small Group" || type === "Specific Ministry Group") {
+    const targetTable = type === "Specific Small Group" ? appData.groups : appData.ministries;
+    const group = targetTable.find(g => String(g.GroupName).toLowerCase() === targetName.toLowerCase());
+    if (group) {
+      let names = [];
+      if (group.Coordinator) names.push(String(group.Coordinator).trim());
+      if (group.MembersList) names = names.concat(String(group.MembersList).split(',').map(n=>n.trim()));
+      recipients = appData.members.filter(m => names.some(n => String(n).toLowerCase() === String(m.FullName).toLowerCase()));
+    }
+  }
+
+  recipients = recipients.filter(m => m.Email && m.Email.includes('@'));
+
+  if (recipients.length === 0) {
+    previewEl.innerHTML = "<span class='text-red-400'><i class='fa-solid fa-triangle-exclamation'></i> No valid emails found.</span>";
+    previewEl.classList.remove('hidden');
+    return;
+  }
+
+  let firstNames = recipients.map(m => String(m.FullName).trim().split(' ')[0]);
+  firstNames = [...new Set(firstNames)]; 
+
+  previewEl.innerHTML = `<span class='text-yellow-400 font-bold'>Recipients (${firstNames.length}):</span> ` + firstNames.join(', ');
+  previewEl.classList.remove('hidden');
 }
 
 // Close dropdowns if clicked outside
@@ -1203,11 +1331,15 @@ async function sendAnnouncement() {
   const message = document.getElementById('announce-message').value.trim();
   
   let targetName = "";
-  if (type === "Specific Member") targetName = document.getElementById('announce-specific-input').value.trim();
-  else if (type === "Specific Small Group" || type === "Specific Ministry Group") targetName = document.getElementById('announce-specific-select').value;
+  if (type === "Specific Member") {
+    if (selectedAnnounceMembers.length === 0) return alert("Please search and select at least one member.");
+    targetName = selectedAnnounceMembers.join(',');
+  } else if (type === "Specific City" || type === "Specific Small Group" || type === "Specific Ministry Group") {
+    targetName = document.getElementById('announce-specific-select').value;
+  }
   
   if (!subject || !message) return alert("A Subject and Message are required!");
-  if (type.includes("Specific") && !targetName) return alert("Please select your specific target from the menu.");
+  if (type.includes("Specific") && type !== "Specific Member" && !targetName) return alert("Please select your specific target from the menu.");
   
   setStatus("Blasting Announcement...", false, true);
   const res = await apiCall('sendAnnouncement', { type: type, targetName: targetName, subject: subject, message: message });
@@ -1217,7 +1349,7 @@ async function sendAnnouncement() {
     document.getElementById('announce-subject').value = "";
     document.getElementById('announce-message').value = "";
     document.getElementById('announce-target-type').value = "All Members";
-    changeAnnounceTarget(); // Resets the UI
+    changeAnnounceTarget(); 
   } else {
     alert("Email Failed: " + res.error);
   }
