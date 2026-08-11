@@ -715,6 +715,16 @@ body { background-color: #0f172a; color: white; display: flex; justify-content: 
 <select id="edit-dob-day" class="w-1/3 bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-blue-500"></select>
 <select id="edit-dob-month" class="w-2/3 bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-blue-500"></select>
 </div>
+
+<!-- SECRET ADMIN ROLE DROPDOWN -->
+      <div id="admin-role-container" class="hidden">
+        <label class="block text-xs font-bold text-yellow-400 mb-1"><i class="fa-solid fa-key mr-1"></i>System Role</label>
+        <select id="edit-new-role" class="w-full bg-slate-900 border border-yellow-700 rounded-lg px-3 py-2 text-sm text-yellow-100 mb-5 focus:outline-none focus:border-yellow-500 shadow-inner">
+          <option value="">Standard Member</option>
+          <option value="Admin">System Admin</option>
+        </select>
+      </div>
+
 <div class="flex gap-3">
 <button onclick="closeEditModal()" class="w-1/2 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded-lg text-sm transition">Cancel</button>
 <button onclick="confirmAction('Update this profile?', saveEditMember)" class="w-1/2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-lg text-sm transition">Update</button>
@@ -1215,6 +1225,16 @@ async function loadAllData() {
       gallery: res.gallery || []
     };
     appData.members.sort((a, b) => String(a.FullName || "").localeCompare(String(b.FullName || "")));
+
+      // --- NEW DYNAMIC ADMIN ASSIGNER ---
+        ADMIN_EMAILS = ["ethiochristians.czech@gmail.com"]; // Reset to default
+        appData.members.forEach(m => {
+          // If the app spots "Admin" in their Role column, it secretly hands them the keys!
+          if (String(m.Role) === "Admin" && m.Email) {
+            ADMIN_EMAILS.push(String(m.Email).trim().toLowerCase());
+          }
+        });
+
     renderAll();
     applySecurityRules();
     
@@ -1650,44 +1670,65 @@ async function addMember() {
 function buildDobSelects() { const daySel = document.getElementById('edit-dob-day'); const monSel = document.getElementById('edit-dob-month'); daySel.innerHTML = '<option value="">Day</option>'; for (let d = 1; d <= 31; d++) daySel.innerHTML += `<option value="${String(d).padStart(2,'0')}">${d}</option>`; const months = ["January","February","March","April","May","June","July","August","September","October","November","December"]; monSel.innerHTML = '<option value="">Month</option>'; months.forEach((m, i) => monSel.innerHTML += `<option value="${String(i+1).padStart(2,'0')}">${m}</option>`); }
 
 function openEditModal(name) {
-pendingPhotoUpload = null; // Empties the waiting room when you open a profile
-const m = appData.members.find(x => String(x.FullName).toLowerCase() === String(name).toLowerCase()); if (!m) return;
-document.getElementById('edit-old-name').value = m.FullName; document.getElementById('edit-new-name').value = m.FullName; document.getElementById('edit-new-email').value = m.Email || "";
-let savedPhone = String(m.Phone || ""); if (savedPhone.startsWith("+420")) savedPhone = savedPhone.replace("+420", ""); document.getElementById('edit-new-phone').value = savedPhone;
-document.getElementById('edit-new-city').value = m.City || "";
-document.getElementById('edit-join-month').value = m.JoinMonth || "2026-07";
-const b = String(m.Birthday || "").trim().split("T")[0]; const parts = b.split("-"); if (parts.length === 3) { document.getElementById('edit-dob-month').value = parts[1]; document.getElementById('edit-dob-day').value = parts[2]; } else if (parts.length === 2) { document.getElementById('edit-dob-month').value = parts[0]; document.getElementById('edit-dob-day').value = parts[1]; } else {
-document.getElementById('edit-dob-month').value = ""; document.getElementById('edit-dob-day').value = ""; }
-const av = document.getElementById('edit-avatar'); if (m.PhotoUrl) av.innerHTML = `<img src="${m.PhotoUrl}" class="w-full h-full object-cover" alt="">`; else av.innerText = String(m.FullName).trim().charAt(0).toUpperCase();
-document.getElementById('photo-status').innerText = "Profile Picture"; document.getElementById('edit-modal').classList.remove('hidden');
+  pendingPhotoUpload = null; 
+  const m = appData.members.find(x => String(x.FullName).toLowerCase() === String(name).toLowerCase()); if (!m) return;
+  document.getElementById('edit-old-name').value = m.FullName;
+  document.getElementById('edit-new-name').value = m.FullName;
+  document.getElementById('edit-new-email').value = m.Email || "";
+  let savedPhone = String(m.Phone || ""); if (savedPhone.startsWith("+420")) savedPhone = savedPhone.replace("+420", ""); document.getElementById('edit-new-phone').value = savedPhone;
+  document.getElementById('edit-new-city').value = m.City || "";
+  document.getElementById('edit-join-month').value = m.JoinMonth || "2026-07";
+  const b = String(m.Birthday || "").trim().split("T")[0]; const parts = b.split("-"); if (parts.length === 3) { document.getElementById('edit-dob-month').value = parts[1]; document.getElementById('edit-dob-day').value = parts[2]; } else if (parts.length === 2) { document.getElementById('edit-dob-month').value = parts[0]; document.getElementById('edit-dob-day').value = parts[1]; } else { document.getElementById('edit-dob-month').value = ""; document.getElementById('edit-dob-day').value = ""; }
+  const av = document.getElementById('edit-avatar'); if (m.PhotoUrl) av.innerHTML = `<img src="${m.PhotoUrl}" class="w-full h-full object-cover" alt="">`; else av.innerText = String(m.FullName).trim().charAt(0).toUpperCase();
+  document.getElementById('photo-status').innerText = "Profile Picture";
+
+  // THE SECRET MASTER ADMIN DROPDOWN LOGIC
+  const roleContainer = document.getElementById('admin-role-container');
+  if (roleContainer) {
+     if (currentUserEmail === "ethiochristians.czech@gmail.com") {
+         roleContainer.classList.remove('hidden');
+         document.getElementById('edit-new-role').value = m.Role || "";
+     } else {
+         roleContainer.classList.add('hidden');
+         document.getElementById('edit-new-role').value = "";
+     }
+  }
+
+  document.getElementById('edit-modal').classList.remove('hidden');
 }
+
 function closeEditModal() { document.getElementById('edit-modal').classList.add('hidden'); }
+
 async function saveEditMember() {
-const oldName = document.getElementById('edit-old-name').value;
-const newName = document.getElementById('edit-new-name').value;
-const newEmail = document.getElementById('edit-new-email').value;
-let rawPhone = document.getElementById('edit-new-phone').value.trim();
-let newPhone = rawPhone !== "" ? "+420-" + rawPhone : "";
-const newCity = document.getElementById('edit-new-city').value;
-const d = document.getElementById('edit-dob-day').value;
-const mo = document.getElementById('edit-dob-month').value;
-let birthday = "";
-if (mo && d) birthday = `${mo}-${d}`;
-else if (mo || d) return alert("Please choose both month and day.");
-if(!newName.trim()) return alert("Name cannot be blank");
-// 1. Send the text data to Google Sheets
+  const oldName = document.getElementById('edit-old-name').value;
+  const newName = document.getElementById('edit-new-name').value;
+  const newEmail = document.getElementById('edit-new-email').value;
+  let rawPhone = document.getElementById('edit-new-phone').value.trim();
+  let newPhone = rawPhone !== "" ? "+420-" + rawPhone : "";
+  const newCity = document.getElementById('edit-new-city').value;
+  const d = document.getElementById('edit-dob-day').value;
+  const mo = document.getElementById('edit-dob-month').value;
+  let birthday = "";
+  if (mo && d) birthday = `${mo}-${d}`;
+  else if (mo || d) return alert("Please choose both month and day.");
+  if(!newName.trim()) return alert("Name cannot be blank");
+  const newJoinMonth = document.getElementById('edit-join-month').value;
 
-const newJoinMonth = document.getElementById('edit-join-month').value;
-await apiCall('editMember', { oldName: oldName, newName: newName, newEmail: newEmail, birthday: birthday, newPhone: newPhone, newCity: newCity, joinMonth: newJoinMonth });
+  // Grab the role (it will be blank if they aren't the Master Admin)
+  const roleDropdown = document.getElementById('edit-new-role');
+  const newRole = roleDropdown ? roleDropdown.value : "";
 
-// 2. Check the "waiting room". If a photo is waiting, upload it now!
-if (pendingPhotoUpload !== null) {
-uploadPhoto(pendingPhotoUpload);
-pendingPhotoUpload = null; // Clear the waiting room once it uploads
+  await apiCall('editMember', { oldName: oldName, newName: newName, newEmail: newEmail, birthday: birthday, newPhone: newPhone, newCity: newCity, joinMonth: newJoinMonth, role: newRole });
+
+  if (pendingPhotoUpload !== null) {
+    uploadPhoto(pendingPhotoUpload);
+    pendingPhotoUpload = null;
+  }
+  closeEditModal();
+  loadAllData();
 }
-closeEditModal();
-loadAllData();
-}
+
+
 // ==========================================
 // PHOTO UPLOAD FRONTEND LOGIC
 // ==========================================
@@ -2435,10 +2476,7 @@ function applySecurityRules() {
 }
 
 // A list of emails that have full Master Admin access
-const ADMIN_EMAILS = [
-  "ethiochristians.czech@gmail.com", 
-  "nati88kid@gmail.com"
-];
+let ADMIN_EMAILS = ["ethiochristians.czech@gmail.com"]; // The Permanent Master Key
 
 // 1. Password Eye Toggle Logic
 function togglePassword(inputId, iconId) {
