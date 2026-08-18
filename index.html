@@ -2128,6 +2128,7 @@ function renderReportsTab() {
 function renderBalanceTab() { 
   let coll = 0; appData.payments.forEach(p=>coll+=Number(p.Amount)); 
   let given = 0; appData.gives.forEach(g=>given+=Number(g.Amount)); 
+  let campTotal = 0; (appData.campaignPayments || []).forEach(cp=>campTotal+=Number(cp.Amount));
   let sp = 0; 
   
   const eList = document.getElementById('expense-history-list'); 
@@ -2140,7 +2141,8 @@ function renderBalanceTab() {
     }
   }); 
   
-  const totalIncome = coll + given;
+  // The upgraded calculation that includes event payments!
+  const totalIncome = coll + given + campTotal;
   const currentBal = totalIncome - sp;
 
   const formatBal = (val, type) => { 
@@ -3372,7 +3374,7 @@ function renderCampaignRoster() {
   document.getElementById('collection-campaign-title').innerText = currentActiveCampaign;
   document.getElementById('collection-campaign-total').innerText = `Total Collected: ${totalCollected} CZK`;
 
-if (showingUnpaid) {  
+  if (showingUnpaid) {  
     const paidNames = eventPayments.map(p => String(p.PayerName).toLowerCase().trim());
     const unpaidMembers = (appData.members || []).filter(m => !paidNames.includes(String(m.FullName).toLowerCase().trim()));
     
@@ -3394,7 +3396,16 @@ if (showingUnpaid) {
       list.innerHTML = '<p class="text-xs text-slate-500 italic text-center py-4">No payments recorded yet.</p>';
     } else {
       eventPayments.forEach(p => {
-        list.innerHTML += `<div class="bg-slate-800 rounded-lg p-3 border border-slate-700 flex justify-between items-center"><span class="text-sm text-white font-bold">${p.PayerName}</span><span class="text-sm font-black text-green-400">${p.Amount} CZK</span></div>`;
+        const safeCamp = String(p.CampaignName).replace(/'/g, "\\'");
+        const safePayer = String(p.PayerName).replace(/'/g, "\\'");
+        list.innerHTML += `
+        <div class="bg-slate-800 rounded-lg p-3 border border-slate-700 flex justify-between items-center shadow-sm">
+          <div><p class="text-sm text-white font-bold">${p.PayerName}</p></div>
+          <div class="flex items-center gap-4">
+            <span class="text-sm font-black text-green-400">${p.Amount} CZK</span>
+            <button onclick="confirmAction('Delete this event payment?', function(){ deleteCampaignPayment('${safeCamp}', '${safePayer}', ${p.Amount}); })" class="text-slate-500 hover:text-red-400 transition"><i class="fa-solid fa-trash-can"></i></button>
+          </div>
+        </div>`;
       });
     }
   }
