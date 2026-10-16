@@ -1142,7 +1142,9 @@ body { background-color: #0f172a; color: white; display: flex; justify-content: 
 
 <script>
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFfgiyQHNMXenOboPjlhnNSVkm5MR0pyH_OoXMW5QVeoDpEK-6g95Hts8wvq_sqYzj/exec";
-const CURRENT_MONTH_STR = "2026-07"; const ADMIN_PIN = "698846";
+const _today = new Date();
+const CURRENT_MONTH_STR = _today.getFullYear() + "-" + String(_today.getMonth() + 1).padStart(2, "0");
+const ADMIN_PIN = "698846";
 let appData = { members: [], payments: [], expenses: [], gives: [], groups: [], ministries: [], programs: [] };
 let reportLimitMonths = 5; let reportLimitGives = 5; let balVisibility = { collected: false, given: false, spent: false, current: false };
 
@@ -1187,8 +1189,7 @@ function apiCall(action, params = {}) {
       done = true; 
       clearTimeout(timer); 
       delete window[cbName]; 
-      if (script.parentNode) script.parentNode.removeChild(script); 
-      
+      if (script.parentNode) script.parentNode.removeChild(script);
       // Hide the blur screen the moment Google finishes responding
       if (loader) loader.classList.add('hidden');
     };
@@ -3350,18 +3351,26 @@ function closeCampaignCollection() {
   document.getElementById('campaigns-dashboard-view').classList.remove('hidden');
 }
 
+let isSavingCampaignPayment = false;
+
 async function recordCampaignPayment() {
+  if (isSavingCampaignPayment) return; // Blocks accidental double-clicks
+  
   const name = document.getElementById('campaign-payer-name').value.trim();
   const amount = document.getElementById('campaign-payer-amount').value;
   
   if (!name || !amount) return alert("Please enter a name and amount.");
   
+  isSavingCampaignPayment = true;
+  document.getElementById('campaign-payer-name').value = "";
+  document.getElementById('campaign-payer-amount').value = "";
+  
   setStatus("Saving Payment...", false, true);
   await apiCall('addCampaignPayment', { campaignName: currentActiveCampaign, payerName: name, amount: amount });
   
-  document.getElementById('campaign-payer-name').value = "";
-  document.getElementById('campaign-payer-amount').value = "";
-  loadAllData();
+  await loadAllData();
+  renderCampaignRoster(); // Immediately refreshes the list on screen
+  isSavingCampaignPayment = false;
 }
 
 function renderCampaignRoster() {
@@ -3424,6 +3433,13 @@ async function deleteCampaign(name) {
   await apiCall('deleteCampaign', { campaignName: name });
   closeCampaignCollection();
   loadAllData();
+}
+
+async function deleteCampaignPayment(cName, pName, amount) {
+  setStatus("Deleting Payment...", false, true);
+  await apiCall('deleteCampaignPayment', { campaignName: cName, payerName: pName, amount: amount });
+  await loadAllData();
+  renderCampaignRoster();
 }
 
 function filterCampaignPayer() {
